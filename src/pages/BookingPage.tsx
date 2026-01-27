@@ -1,20 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Calendar, Clock, MapPin, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
+import { Link, useParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
-const services = [
-  { id: 1, name: "Facial Treatment", duration: "60 min", price: "$80", description: "Rejuvenating facial with premium products" },
-  { id: 2, name: "Consultation", duration: "30 min", price: "$40", description: "Initial consultation and assessment" },
-  { id: 3, name: "Massage Therapy", duration: "90 min", price: "$120", description: "Full body relaxation massage" },
-  { id: 4, name: "Deep Cleansing", duration: "45 min", price: "$65", description: "Deep pore cleansing treatment" },
-];
+interface Service {
+  id: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price: number;
+}
+
+interface ProviderProfile {
+  id: string;
+  business_name: string;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  working_hours: any;
+}
 
 const timeSlots = [
-  "9:00 AM", "10:00 AM", "11:00 AM", "1:00 PM", "2:00 PM", "3:00 PM", "4:00 PM", "5:00 PM"
+  "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"
 ];
 
-// Generate calendar days
 const generateCalendarDays = () => {
   const today = new Date();
   const days = [];
@@ -23,50 +35,161 @@ const generateCalendarDays = () => {
     date.setDate(today.getDate() + i);
     days.push({
       date,
-      dayName: date.toLocaleDateString('en-US', { weekday: 'short' }),
+      dayName: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
       dayNumber: date.getDate(),
       isToday: i === 0,
-      available: i !== 0 && i !== 7, // Make some days unavailable for demo
+      available: i !== 0 && i !== 7,
     });
   }
   return days;
 };
 
 export default function BookingPage() {
+  const { providerId } = useParams<{ providerId: string }>();
+  const { user } = useAuth();
+  
   const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<number | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
   const [isBooked, setIsBooked] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [provider, setProvider] = useState<ProviderProfile | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
 
   const calendarDays = generateCalendarDays();
 
-  const handleSubmit = () => {
-    setIsBooked(true);
+  useEffect(() => {
+    if (providerId) {
+      fetchProviderData();
+    }
+  }, [providerId]);
+
+  const fetchProviderData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch provider profile
+      const { data: providerData, error: providerError } = await supabase
+        .from('provider_profiles')
+        .select('*')
+        .eq('id', providerId)
+        .maybeSingle();
+
+      if (providerError || !providerData) {
+        console.error('Provider not found');
+        return;
+      }
+      setProvider(providerData);
+
+      // Fetch services
+      const { data: servicesData } = await supabase
+        .from('services')
+        .select('*')
+        .eq('provider_id', providerId)
+        .eq('active', true);
+      setServices(servicesData || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
+  const handleSubmit = async () => {
+    if (!provider || !selectedService || selectedDate === null || !selectedTime) return;
+    
+    setIsSubmitting(true);
+    try {
+      const selectedServiceData = services.find(s => s.id === selectedService);
+      const appointmentDate = calendarDays[selectedDate].date.toISOString().split('T')[0];
+      const endTime = calculateEndTime(selectedTime, selectedServiceData?.duration_minutes || 60);
+
+      const { error } = await supabase
+        .from('appointments')
+        .insert({
+          provider_id: provider.id,
+          client_id: user?.id || null,
+          service_id: selectedService,
+          client_name: formData.name,
+          client_email: formData.email,
+          client_phone: formData.phone,
+          appointment_date: appointmentDate,
+          start_time: selectedTime,
+          end_time: endTime,
+          notes: formData.notes,
+          status: 'pending',
+        });
+
+      if (error) throw error;
+
+      setIsBooked(true);
+      toast.success("Agendamento realizado com sucesso!");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao realizar agendamento");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const calculateEndTime = (startTime: string, durationMinutes: number) => {
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + durationMinutes;
+    const endHours = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+    return `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+  };
+
+  const formatPrice = (price: number) => {
+    return `R$ ${price.toFixed(2).replace('.', ',')}`;
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!provider) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <div className="text-center">
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Profissional não encontrado</h1>
+          <p className="text-muted-foreground mb-6">O link de agendamento pode estar incorreto.</p>
+          <Link to="/">
+            <Button>Voltar para Início</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (isBooked) {
+    const selectedServiceData = services.find(s => s.id === selectedService);
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center animate-scale-in">
           <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-6">
             <Check className="w-10 h-10 text-primary" />
           </div>
-          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Booking Confirmed!</h1>
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">Agendamento Confirmado!</h1>
           <p className="text-muted-foreground mb-6">
-            Your appointment has been scheduled. You'll receive a confirmation email shortly.
+            Seu agendamento foi realizado. Você receberá uma confirmação em breve.
           </p>
           <div className="p-4 rounded-xl bg-card border border-border mb-6">
             <p className="font-semibold text-card-foreground">
-              {services.find(s => s.id === selectedService)?.name}
+              {selectedServiceData?.name}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              {calendarDays[selectedDate!]?.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at {selectedTime}
+              {calendarDays[selectedDate!]?.date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
             </p>
           </div>
           <Link to="/">
-            <Button variant="outline">Back to Home</Button>
+            <Button variant="outline">Voltar para Início</Button>
           </Link>
         </div>
       </div>
@@ -83,11 +206,13 @@ export default function BookingPage() {
               <Calendar className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-display font-bold text-foreground">Serenity Spa & Wellness</h1>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <MapPin className="w-4 h-4" />
-                <span>123 Wellness Ave, Downtown</span>
-              </div>
+              <h1 className="text-xl font-display font-bold text-foreground">{provider.business_name}</h1>
+              {(provider.address || provider.city) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <MapPin className="w-4 h-4" />
+                  <span>{[provider.address, provider.city].filter(Boolean).join(', ')}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -98,9 +223,9 @@ export default function BookingPage() {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-center gap-4">
             {[
-              { num: 1, label: "Service" },
-              { num: 2, label: "Date & Time" },
-              { num: 3, label: "Details" },
+              { num: 1, label: "Serviço" },
+              { num: 2, label: "Data e Hora" },
+              { num: 3, label: "Seus Dados" },
             ].map((s, i) => (
               <div key={s.num} className="flex items-center gap-2">
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
@@ -128,35 +253,45 @@ export default function BookingPage() {
         {step === 1 && (
           <div className="space-y-6 animate-fade-in">
             <div>
-              <h2 className="text-2xl font-display font-bold text-foreground">Select a Service</h2>
-              <p className="text-muted-foreground">Choose the service you'd like to book</p>
+              <h2 className="text-2xl font-display font-bold text-foreground">Selecione um Serviço</h2>
+              <p className="text-muted-foreground">Escolha o serviço que deseja agendar</p>
             </div>
             <div className="grid gap-3">
-              {services.map((service) => (
-                <button
-                  key={service.id}
-                  onClick={() => setSelectedService(service.id)}
-                  className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                    selectedService === service.id
-                      ? "border-primary bg-primary/5 shadow-soft"
-                      : "border-border bg-card hover:border-primary/30"
-                  }`}
-                >
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold text-card-foreground">{service.name}</h3>
-                      <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
-                      <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-4 h-4" />
-                          {service.duration}
-                        </span>
+              {services.length === 0 ? (
+                <div className="text-center py-12 bg-card rounded-xl border border-border">
+                  <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="font-semibold text-foreground mb-2">Nenhum serviço disponível</h3>
+                  <p className="text-muted-foreground">Este profissional ainda não cadastrou serviços.</p>
+                </div>
+              ) : (
+                services.map((service) => (
+                  <button
+                    key={service.id}
+                    onClick={() => setSelectedService(service.id)}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      selectedService === service.id
+                        ? "border-primary bg-primary/5 shadow-soft"
+                        : "border-border bg-card hover:border-primary/30"
+                    }`}
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-semibold text-card-foreground">{service.name}</h3>
+                        {service.description && (
+                          <p className="text-sm text-muted-foreground mt-1">{service.description}</p>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-sm text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {service.duration_minutes} min
+                          </span>
+                        </div>
                       </div>
+                      <span className="text-lg font-semibold text-foreground">{formatPrice(service.price)}</span>
                     </div>
-                    <span className="text-lg font-semibold text-foreground">{service.price}</span>
-                  </div>
-                </button>
-              ))}
+                  </button>
+                ))
+              )}
             </div>
             <Button 
               size="lg" 
@@ -164,7 +299,7 @@ export default function BookingPage() {
               disabled={!selectedService}
               onClick={() => setStep(2)}
             >
-              Continue
+              Continuar
             </Button>
           </div>
         )}
@@ -177,14 +312,14 @@ export default function BookingPage() {
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h2 className="text-2xl font-display font-bold text-foreground">Select Date & Time</h2>
-                <p className="text-muted-foreground">Choose your preferred appointment slot</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Selecione Data e Hora</h2>
+                <p className="text-muted-foreground">Escolha o melhor horário para você</p>
               </div>
             </div>
 
             {/* Date Picker */}
             <div className="space-y-3">
-              <h3 className="font-semibold text-foreground">Available Dates</h3>
+              <h3 className="font-semibold text-foreground">Datas Disponíveis</h3>
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {calendarDays.map((day, i) => (
                   <button
@@ -199,7 +334,7 @@ export default function BookingPage() {
                           : "bg-card border border-border hover:border-primary/30"
                     }`}
                   >
-                    <div className="text-xs opacity-70">{day.dayName}</div>
+                    <div className="text-xs opacity-70 capitalize">{day.dayName}</div>
                     <div className="text-lg font-semibold">{day.dayNumber}</div>
                   </button>
                 ))}
@@ -209,7 +344,7 @@ export default function BookingPage() {
             {/* Time Slots */}
             {selectedDate !== null && (
               <div className="space-y-3 animate-fade-in">
-                <h3 className="font-semibold text-foreground">Available Times</h3>
+                <h3 className="font-semibold text-foreground">Horários Disponíveis</h3>
                 <div className="grid grid-cols-4 gap-2">
                   {timeSlots.map((time) => (
                     <button
@@ -234,7 +369,7 @@ export default function BookingPage() {
               disabled={selectedDate === null || !selectedTime}
               onClick={() => setStep(3)}
             >
-              Continue
+              Continuar
             </Button>
           </div>
         )}
@@ -247,23 +382,23 @@ export default function BookingPage() {
                 <ChevronLeft className="w-5 h-5" />
               </Button>
               <div>
-                <h2 className="text-2xl font-display font-bold text-foreground">Your Details</h2>
-                <p className="text-muted-foreground">Enter your contact information</p>
+                <h2 className="text-2xl font-display font-bold text-foreground">Seus Dados</h2>
+                <p className="text-muted-foreground">Informe seus dados de contato</p>
               </div>
             </div>
 
             {/* Booking Summary */}
             <div className="p-4 rounded-xl bg-primary/5 border border-primary/20">
-              <h3 className="font-semibold text-foreground mb-2">Booking Summary</h3>
+              <h3 className="font-semibold text-foreground mb-2">Resumo do Agendamento</h3>
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">
                   <span className="font-medium text-foreground">{services.find(s => s.id === selectedService)?.name}</span>
                 </p>
-                <p className="text-muted-foreground">
-                  {calendarDays[selectedDate!]?.date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at {selectedTime}
+                <p className="text-muted-foreground capitalize">
+                  {calendarDays[selectedDate!]?.date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
                 </p>
                 <p className="text-lg font-semibold text-foreground mt-2">
-                  {services.find(s => s.id === selectedService)?.price}
+                  {formatPrice(services.find(s => s.id === selectedService)?.price || 0)}
                 </p>
               </div>
             </div>
@@ -271,42 +406,42 @@ export default function BookingPage() {
             {/* Form */}
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">Full Name *</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Nome Completo *</label>
                 <input 
                   type="text" 
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Your full name"
+                  placeholder="Seu nome completo"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">Email Address *</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">E-mail *</label>
                 <input 
                   type="email" 
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="your@email.com"
+                  placeholder="seu@email.com"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">Phone Number *</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Telefone *</label>
                 <input 
                   type="tel" 
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="(555) 123-4567"
+                  placeholder="(11) 99999-9999"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-1">Notes (optional)</label>
+                <label className="block text-sm font-medium text-muted-foreground mb-1">Observações (opcional)</label>
                 <textarea 
                   rows={3}
                   value={formData.notes}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  placeholder="Any special requests or notes"
+                  placeholder="Alguma informação adicional"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                 />
               </div>
@@ -316,10 +451,11 @@ export default function BookingPage() {
               size="lg" 
               variant="hero"
               className="w-full"
-              disabled={!formData.name || !formData.email || !formData.phone}
+              disabled={!formData.name || !formData.email || !formData.phone || isSubmitting}
               onClick={handleSubmit}
             >
-              Confirm Booking
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Confirmar Agendamento
             </Button>
           </div>
         )}

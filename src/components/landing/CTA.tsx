@@ -13,21 +13,21 @@ export function CTA() {
           
           <div className="relative z-10 px-8 py-16 md:py-24 text-center">
             <h2 className="text-3xl md:text-4xl lg:text-5xl font-display font-bold text-primary-foreground mb-6 max-w-3xl mx-auto">
-              Ready to simplify your scheduling?
+              Pronto para simplificar seus agendamentos?
             </h2>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 max-w-xl mx-auto">
-              Join thousands of professionals who save hours every week with our intuitive booking platform.
+              Junte-se a milhares de profissionais que economizam horas toda semana com nossa plataforma intuitiva.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/dashboard">
+              <Link to="/entrar?mode=register">
                 <Button variant="hero" size="xl" className="group">
-                  Start Free Trial
+                  Começar Grátis
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>
             </div>
             <p className="text-sm text-primary-foreground/60 mt-6">
-              No credit card required · Free 14-day trial · Cancel anytime
+              Sem cartão de crédito · Teste grátis de 14 dias · Cancele quando quiser
             </p>
           </div>
         </div>

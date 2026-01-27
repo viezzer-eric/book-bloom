@@ -3,33 +3,33 @@ import { Calendar, Clock, Bell, Users, Sparkles, Shield } from "lucide-react";
 const features = [
   {
     icon: Calendar,
-    title: "Smart Calendar",
-    description: "Manage your availability with an intuitive drag-and-drop calendar. Set working hours, block time off, and sync with your existing tools.",
+    title: "Calendário Inteligente",
+    description: "Gerencie sua disponibilidade com um calendário intuitivo. Defina horários de trabalho, bloqueie folgas e sincronize com suas ferramentas.",
   },
   {
     icon: Clock,
-    title: "Real-Time Booking",
-    description: "Clients see your live availability and can book instantly. No more back-and-forth emails or phone calls.",
+    title: "Agendamento em Tempo Real",
+    description: "Clientes veem sua disponibilidade ao vivo e podem agendar instantaneamente. Sem mais trocas de emails ou ligações.",
   },
   {
     icon: Bell,
-    title: "Automatic Reminders",
-    description: "Reduce no-shows with automated email and SMS reminders sent to both you and your clients.",
+    title: "Lembretes Automáticos",
+    description: "Reduza faltas com lembretes automáticos por email e SMS enviados para você e seus clientes.",
   },
   {
     icon: Users,
-    title: "Client Management",
-    description: "Keep track of client history, preferences, and notes. Build lasting relationships with personalized service.",
+    title: "Gestão de Clientes",
+    description: "Acompanhe o histórico, preferências e anotações dos clientes. Construa relacionamentos duradouros com atendimento personalizado.",
   },
   {
     icon: Sparkles,
-    title: "Beautiful Booking Page",
-    description: "Your personalized booking page reflects your brand. Easy to share and looks great on any device.",
+    title: "Página de Agendamento",
+    description: "Sua página personalizada reflete sua marca. Fácil de compartilhar e fica ótima em qualquer dispositivo.",
   },
   {
     icon: Shield,
-    title: "Secure & Reliable",
-    description: "Enterprise-grade security protects your data. 99.9% uptime means you never miss a booking.",
+    title: "Seguro e Confiável",
+    description: "Segurança de nível empresarial protege seus dados. 99,9% de disponibilidade significa que você nunca perde um agendamento.",
   },
 ];
 
@@ -39,10 +39,10 @@ export function Features() {
       <div className="container mx-auto px-4">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-            Everything you need to manage appointments
+            Tudo que você precisa para gerenciar agendamentos
           </h2>
           <p className="text-lg text-muted-foreground">
-            Powerful features designed for service professionals who want to spend less time managing and more time doing what they love.
+            Funcionalidades poderosas pensadas para profissionais de serviços que querem gastar menos tempo gerenciando e mais tempo fazendo o que amam.
           </p>
         </div>
         
