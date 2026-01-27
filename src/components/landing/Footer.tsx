@@ -15,15 +15,15 @@ export function Footer() {
               <span className="text-xl font-display font-semibold">Bookly</span>
             </Link>
             <p className="text-background/60 text-sm leading-relaxed">
-              The intuitive scheduling platform for service professionals.
+              A plataforma intuitiva de agendamento para profissionais de serviços.
             </p>
           </div>
           
           {/* Links */}
           <div>
-            <h4 className="font-semibold mb-4">Product</h4>
+            <h4 className="font-semibold mb-4">Produto</h4>
             <ul className="space-y-2">
-              {['Features', 'Pricing', 'Integrations', 'API'].map((item) => (
+              {['Funcionalidades', 'Preços', 'Integrações', 'API'].map((item) => (
                 <li key={item}>
                   <Link to="/" className="text-sm text-background/60 hover:text-background transition-colors">
                     {item}
@@ -34,9 +34,9 @@ export function Footer() {
           </div>
           
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
+            <h4 className="font-semibold mb-4">Empresa</h4>
             <ul className="space-y-2">
-              {['About', 'Blog', 'Careers', 'Contact'].map((item) => (
+              {['Sobre', 'Blog', 'Carreiras', 'Contato'].map((item) => (
                 <li key={item}>
                   <Link to="/" className="text-sm text-background/60 hover:text-background transition-colors">
                     {item}
@@ -49,7 +49,7 @@ export function Footer() {
           <div>
             <h4 className="font-semibold mb-4">Legal</h4>
             <ul className="space-y-2">
-              {['Privacy', 'Terms', 'Security', 'Cookies'].map((item) => (
+              {['Privacidade', 'Termos', 'Segurança', 'Cookies'].map((item) => (
                 <li key={item}>
                   <Link to="/" className="text-sm text-background/60 hover:text-background transition-colors">
                     {item}
@@ -62,7 +62,7 @@ export function Footer() {
         
         <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-background/60">
-            © 2024 Bookly. All rights reserved.
+            © 2024 Bookly. Todos os direitos reservados.
           </p>
           <div className="flex gap-6">
             {['Twitter', 'LinkedIn', 'Instagram'].map((social) => (

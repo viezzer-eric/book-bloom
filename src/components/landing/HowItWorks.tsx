@@ -3,21 +3,21 @@ import { CheckCircle2 } from "lucide-react";
 const steps = [
   {
     number: "01",
-    title: "Create Your Profile",
-    description: "Set up your business details, add your services, and define your pricing. It takes less than 5 minutes.",
-    details: ["Business name & description", "Service catalog", "Pricing & duration"],
+    title: "Crie Seu Perfil",
+    description: "Configure os detalhes do seu negócio, adicione seus serviços e defina seus preços. Leva menos de 5 minutos.",
+    details: ["Nome e descrição do negócio", "Catálogo de serviços", "Preços e duração"],
   },
   {
     number: "02",
-    title: "Set Your Availability",
-    description: "Define your working hours and block off personal time. Your calendar syncs in real-time.",
-    details: ["Working hours", "Buffer times", "Holiday scheduling"],
+    title: "Defina Sua Disponibilidade",
+    description: "Configure seus horários de trabalho e bloqueie tempo pessoal. Sua agenda sincroniza em tempo real.",
+    details: ["Horário de funcionamento", "Intervalos entre atendimentos", "Feriados e folgas"],
   },
   {
     number: "03",
-    title: "Share & Accept Bookings",
-    description: "Share your unique booking link. Clients book directly and you both get instant confirmations.",
-    details: ["Shareable booking page", "Instant notifications", "Calendar sync"],
+    title: "Compartilhe e Receba Agendamentos",
+    description: "Compartilhe seu link exclusivo. Clientes agendam diretamente e ambos recebem confirmações instantâneas.",
+    details: ["Página de agendamento compartilhável", "Notificações instantâneas", "Sincronização de agenda"],
   },
 ];
 
@@ -27,13 +27,13 @@ export function HowItWorks() {
       <div className="container mx-auto px-4">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            How It Works
+            Como Funciona
           </span>
           <h2 className="text-3xl md:text-4xl font-display font-bold text-foreground mb-4">
-            Get started in minutes
+            Comece em minutos
           </h2>
           <p className="text-lg text-muted-foreground">
-            No complicated setup. No technical skills required. Just simple scheduling that works.
+            Sem configuração complicada. Sem habilidades técnicas necessárias. Apenas agendamento simples que funciona.
           </p>
         </div>
         

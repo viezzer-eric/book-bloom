@@ -18,13 +18,13 @@ export function Hero() {
           <div className="space-y-8 animate-fade-up">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary-foreground/10 backdrop-blur-sm border border-primary-foreground/20">
               <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-              <span className="text-sm font-medium text-primary-foreground/90">Scheduling made simple</span>
+              <span className="text-sm font-medium text-primary-foreground/90">Agendamento simplificado</span>
             </div>
             
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-primary-foreground leading-tight text-balance">
-              Book appointments with{" "}
+              Agende com{" "}
               <span className="relative">
-                confidence
+                confiança
                 <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" fill="none">
                   <path d="M2 10C50 4 150 4 198 10" stroke="hsl(var(--accent))" strokeWidth="3" strokeLinecap="round" />
                 </svg>
@@ -32,19 +32,19 @@ export function Hero() {
             </h1>
             
             <p className="text-lg md:text-xl text-primary-foreground/80 max-w-xl leading-relaxed font-body">
-              The intuitive scheduling platform for service professionals. Manage your calendar, 
-              accept bookings, and delight your clients—all in one place.
+              A plataforma intuitiva de agendamento para profissionais de serviços. Gerencie sua agenda, 
+              receba reservas e encante seus clientes — tudo em um só lugar.
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/dashboard">
+              <Link to="/entrar?mode=register&role=provider">
                 <Button variant="hero" size="xl">
-                  Get Started Free
+                  Sou Profissional
                 </Button>
               </Link>
-              <Link to="/book/demo">
+              <Link to="/entrar?mode=register&role=client">
                 <Button variant="heroOutline" size="xl">
-                  View Demo
+                  Sou Cliente
                 </Button>
               </Link>
             </div>
@@ -62,7 +62,7 @@ export function Hero() {
                 ))}
               </div>
               <div className="text-primary-foreground/80">
-                <span className="font-semibold">2,000+</span> professionals trust us
+                <span className="font-semibold">2.000+</span> profissionais confiam em nós
               </div>
             </div>
           </div>
@@ -77,15 +77,15 @@ export function Hero() {
                     <Calendar className="w-6 h-6 text-primary" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-card-foreground">Today's Schedule</h3>
-                    <p className="text-sm text-muted-foreground">3 appointments</p>
+                    <h3 className="font-semibold text-card-foreground">Agenda de Hoje</h3>
+                    <p className="text-sm text-muted-foreground">3 agendamentos</p>
                   </div>
                 </div>
                 <div className="space-y-3">
                   {[
-                    { time: '10:00 AM', client: 'Sarah Johnson', service: 'Facial Treatment' },
-                    { time: '1:00 PM', client: 'Mike Chen', service: 'Consultation' },
-                    { time: '3:30 PM', client: 'Emma Davis', service: 'Massage Therapy' },
+                    { time: '10:00', client: 'Sarah Johnson', service: 'Tratamento Facial' },
+                    { time: '13:00', client: 'Mike Chen', service: 'Consulta' },
+                    { time: '15:30', client: 'Emma Davis', service: 'Massagem' },
                   ].map((apt, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
                       <Clock className="w-4 h-4 text-primary" />
@@ -104,8 +104,8 @@ export function Hero() {
                     <Users className="w-5 h-5 text-accent" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-card-foreground">New Booking!</p>
-                    <p className="text-xs text-muted-foreground">Just now</p>
+                    <p className="text-sm font-medium text-card-foreground">Novo Agendamento!</p>
+                    <p className="text-xs text-muted-foreground">Agora mesmo</p>
                   </div>
                 </div>
               </div>

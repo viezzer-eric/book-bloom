@@ -1,3 +1,4 @@
+import { AuthProvider } from "@/hooks/useAuth";
 import { Header } from "@/components/landing/Header";
 import { Hero } from "@/components/landing/Hero";
 import { Features } from "@/components/landing/Features";
