@@ -2,10 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Eye, EyeOff, Loader2 } from "lucide-react";
+import { Calendar, Eye, EyeOff, Loader2, MessageCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+
+const WHATSAPP_NUMBER = "5511999999999"; // Substitua pelo número real
+const WHATSAPP_MESSAGE = encodeURIComponent(
+  "Olá! Tenho interesse em me cadastrar como prestador de serviço na plataforma Bookly. Gostaria de saber mais sobre valores e condições."
+);
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -44,13 +49,13 @@ export default function Auth() {
           return;
         }
 
-        const { error } = await signUp(formData.email, formData.password, formData.fullName, role);
+        const { error } = await signUp(formData.email, formData.password, formData.fullName, "client");
         
         if (error) {
           toast.error(error.message || "Erro ao criar conta");
         } else {
           toast.success("Conta criada com sucesso!");
-          navigate(role === "provider" ? "/painel" : "/meus-agendamentos");
+          navigate("/meus-agendamentos");
         }
       } else {
         const { error } = await signIn(formData.email, formData.password);
@@ -69,6 +74,149 @@ export default function Auth() {
     }
   };
 
+  const handleWhatsAppContact = () => {
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`, "_blank");
+  };
+
+  // Provider registration flow - show WhatsApp contact
+  const renderProviderFlow = () => (
+    <div className="space-y-6 text-center">
+      <div className="p-6 rounded-2xl bg-primary/5 border border-primary/20">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+          <MessageCircle className="w-8 h-8 text-primary" />
+        </div>
+        <h3 className="text-xl font-semibold text-foreground mb-2">
+          Cadastro de Prestadores
+        </h3>
+        <p className="text-muted-foreground mb-6">
+          Para se cadastrar como prestador de serviços, entre em contato conosco pelo WhatsApp. 
+          O cadastro é feito manualmente e os valores e condições são acertados diretamente.
+        </p>
+        <Button 
+          onClick={handleWhatsAppContact}
+          className="w-full bg-[#25D366] hover:bg-[#20BD5A] text-white"
+          size="lg"
+        >
+          <MessageCircle className="w-5 h-5 mr-2" />
+          Falar no WhatsApp
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">
+        Após o contato, sua conta será criada e você receberá as credenciais de acesso.
+      </p>
+    </div>
+  );
+
+  // Client registration form
+  const renderClientForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="fullName">Nome completo</Label>
+        <Input
+          id="fullName"
+          type="text"
+          placeholder="Seu nome completo"
+          value={formData.fullName}
+          onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="email">E-mail</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="password">Senha</Label>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="confirmPassword">Confirmar senha</Label>
+        <Input
+          id="confirmPassword"
+          type="password"
+          placeholder="••••••••"
+          value={formData.confirmPassword}
+          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+          required
+        />
+      </div>
+
+      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        Criar conta
+      </Button>
+    </form>
+  );
+
+  // Login form
+  const renderLoginForm = () => (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="email">E-mail</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="seu@email.com"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+        />
+      </div>
+      
+      <div className="space-y-2">
+        <Label htmlFor="password">Senha</Label>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="••••••••"
+            value={formData.password}
+            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            required
+          />
+          <button
+            type="button"
+            onClick={() => setShowPassword(!showPassword)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+          >
+            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </button>
+        </div>
+      </div>
+
+      <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+        {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+        Entrar
+      </Button>
+    </form>
+  );
+
   return (
     <div className="min-h-screen bg-background flex">
       {/* Left side - Form */}
@@ -83,12 +231,15 @@ export default function Auth() {
               <span className="text-2xl font-display font-semibold text-foreground">Bookly</span>
             </Link>
             <h1 className="text-2xl font-display font-bold text-foreground">
-              {mode === "login" ? "Bem-vindo de volta" : "Crie sua conta"}
+              {mode === "login" ? "Bem-vindo de volta" : 
+                role === "provider" ? "Seja um Prestador" : "Crie sua conta"}
             </h1>
             <p className="text-muted-foreground mt-2">
               {mode === "login" 
                 ? "Entre com suas credenciais para acessar sua conta" 
-                : "Preencha os dados abaixo para começar"
+                : role === "provider"
+                  ? "Entre em contato para se cadastrar"
+                  : "Preencha os dados abaixo para começar"
               }
             </p>
           </div>
@@ -126,74 +277,13 @@ export default function Auth() {
             </div>
           )}
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "register" && (
-              <div className="space-y-2">
-                <Label htmlFor="fullName">Nome completo</Label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  placeholder="Seu nome completo"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  required
-                />
-              </div>
-            )}
-            
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="seu@email.com"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {mode === "register" && (
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirmar senha</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  placeholder="••••••••"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                />
-              </div>
-            )}
-
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              {mode === "login" ? "Entrar" : "Criar conta"}
-            </Button>
-          </form>
+          {/* Form Content */}
+          {mode === "login" 
+            ? renderLoginForm()
+            : role === "provider" 
+              ? renderProviderFlow() 
+              : renderClientForm()
+          }
 
           {/* Toggle mode */}
           <div className="text-center text-sm">
@@ -226,10 +316,16 @@ export default function Auth() {
       <div className="hidden lg:flex flex-1 gradient-hero items-center justify-center p-12">
         <div className="max-w-md text-center text-primary-foreground">
           <h2 className="text-3xl font-display font-bold mb-4">
-            Gerencie seus agendamentos com facilidade
+            {role === "provider" && mode === "register"
+              ? "Expanda seu negócio com a gente"
+              : "Gerencie seus agendamentos com facilidade"
+            }
           </h2>
           <p className="text-primary-foreground/80 text-lg">
-            A plataforma mais simples para profissionais de serviços gerenciarem sua agenda e clientes.
+            {role === "provider" && mode === "register"
+              ? "Entre em contato pelo WhatsApp e descubra como podemos ajudar você a gerenciar sua agenda e conquistar mais clientes."
+              : "A plataforma mais simples para profissionais de serviços gerenciarem sua agenda e clientes."
+            }
           </p>
         </div>
       </div>
