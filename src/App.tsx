@@ -10,6 +10,7 @@ import ProviderDashboard from "./pages/ProviderDashboard";
 import ClientDashboard from "./pages/ClientDashboard";
 import Profile from "./pages/Profile";
 import BookingPage from "./pages/BookingPage";
+import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            <Route path="/buscar" element={<SearchPage />} />
             <Route path="/entrar" element={<Auth />} />
             <Route path="/painel" element={<ProviderDashboard />} />
             <Route path="/meus-agendamentos" element={<ClientDashboard />} />
