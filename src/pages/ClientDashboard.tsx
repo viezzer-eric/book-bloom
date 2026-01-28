@@ -145,7 +145,7 @@ export default function ClientDashboard() {
           </div>
 
           {/* Search Button */}
-          <Link to="/" className="block mb-8">
+          <Link to="/buscar" className="block mb-8">
             <Button variant="outline" className="w-full justify-start text-muted-foreground" size="lg">
               <Search className="w-4 h-4 mr-2" />
               Buscar profissionais...
@@ -176,7 +176,7 @@ export default function ClientDashboard() {
                   <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
                   <h3 className="font-semibold text-foreground mb-2">Nenhum agendamento</h3>
                   <p className="text-muted-foreground mb-4">Você ainda não tem agendamentos futuros.</p>
-                  <Link to="/">
+                  <Link to="/buscar">
                     <Button>Buscar Profissionais</Button>
                   </Link>
                 </div>

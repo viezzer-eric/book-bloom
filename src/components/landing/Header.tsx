@@ -27,15 +27,15 @@ export function Header() {
           
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
-            <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+            <Link to="/buscar" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Buscar Profissionais
+            </Link>
+            <a href="#funcionalidades" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Funcionalidades
-            </Link>
-            <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Preços
-            </Link>
-            <Link to="/" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Sobre
-            </Link>
+            </a>
+            <a href="#como-funciona" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
+              Como Funciona
+            </a>
           </nav>
           
           {/* Desktop CTA */}
@@ -75,15 +75,15 @@ export function Header() {
         {mobileMenuOpen && (
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <nav className="flex flex-col gap-2">
-              <Link to="/" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+              <Link to="/buscar" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                Buscar Profissionais
+              </Link>
+              <a href="#funcionalidades" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
                 Funcionalidades
-              </Link>
-              <Link to="/" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
-                Preços
-              </Link>
-              <Link to="/" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
-                Sobre
-              </Link>
+              </a>
+              <a href="#como-funciona" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                Como Funciona
+              </a>
               <div className="flex gap-2 mt-2 px-4">
                 {user ? (
                   <Link to={getDashboardLink()} className="flex-1">
