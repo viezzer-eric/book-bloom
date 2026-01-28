@@ -7,9 +7,9 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-const WHATSAPP_NUMBER = "5511999999999"; // Substitua pelo número real
+const WHATSAPP_NUMBER = "5511961380749"; 
 const WHATSAPP_MESSAGE = encodeURIComponent(
-  "Olá! Tenho interesse em me cadastrar como prestador de serviço na plataforma Bookly. Gostaria de saber mais sobre valores e condições."
+  "Olá! Tenho interesse em me cadastrar como prestador de serviço na plataforma Bookly!"
 );
 
 export default function Auth() {

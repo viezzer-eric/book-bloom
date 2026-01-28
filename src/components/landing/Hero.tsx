@@ -1,8 +1,17 @@
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Users } from "lucide-react";
 import { Link } from "react-router-dom";
+import { providerRepository } from "@/repositories/providerRepository";
+import { useEffect, useState } from "react";
 
 export function Hero() {
+
+  const [providersCount, setProvidersCount] = useState(0);
+
+  useEffect(() => {
+    providerRepository.countProviders().then(setProvidersCount);
+  }, []);
+
   return (
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Background gradient */}
@@ -61,9 +70,15 @@ export function Hero() {
                   </div>
                 ))}
               </div>
-              <div className="text-primary-foreground/80">
-                <span className="font-semibold">2.000+</span> profissionais confiam em nós
-              </div>
+                <div className="text-primary-foreground/80">
+                    {providersCount > 0 ? (
+                      <>
+                        <span className="font-semibold">{providersCount}</span> profissionais confiam em nós
+                      </>
+                    ) : (
+                      <span className="font-semibold">Seja o primeiro Profissional com descontos IMPERDIVEIS</span>
+                    )}
+                </div>
             </div>
           </div>
           
@@ -83,9 +98,9 @@ export function Hero() {
                 </div>
                 <div className="space-y-3">
                   {[
-                    { time: '10:00', client: 'Sarah Johnson', service: 'Tratamento Facial' },
-                    { time: '13:00', client: 'Mike Chen', service: 'Consulta' },
-                    { time: '15:30', client: 'Emma Davis', service: 'Massagem' },
+                    { time: '10:00', client: 'Milena Silva', service: 'Unha' },
+                    { time: '13:00', client: 'Melissa Salores', service: 'Cabelo' },
+                    { time: '15:30', client: 'Vanessa Fernandes', service: 'Maquiagem' },
                   ].map((apt, i) => (
                     <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-secondary/50">
                       <Clock className="w-4 h-4 text-primary" />

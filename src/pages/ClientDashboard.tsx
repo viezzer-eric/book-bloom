@@ -113,12 +113,12 @@ export default function ClientDashboard() {
       <header className="bg-card border-b border-border sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg gradient-hero flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-display font-semibold text-foreground">Bookly</span>
-            </Link>
+            </div>
             
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2">
@@ -143,15 +143,7 @@ export default function ClientDashboard() {
             </h1>
             <p className="text-muted-foreground">Gerencie seus agendamentos</p>
           </div>
-
-          {/* Search Button */}
-          <Link to="/buscar" className="block mb-8">
-            <Button variant="outline" className="w-full justify-start text-muted-foreground" size="lg">
-              <Search className="w-4 h-4 mr-2" />
-              Buscar profissionais...
-            </Button>
-          </Link>
-
+          
           {/* Tabs */}
           <div className="flex gap-2 mb-6">
             <Button 

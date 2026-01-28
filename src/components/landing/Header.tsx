@@ -10,7 +10,7 @@ export function Header() {
 
   const getDashboardLink = () => {
     if (!user) return "/entrar";
-    return userRole === "provider" ? "/painel" : "/meus-agendamentos";
+    return userRole === "provider" ? "/painel" : "/buscar";
   };
 
   return (
@@ -26,10 +26,7 @@ export function Header() {
           </Link>
           
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-8">
-            <Link to="/buscar" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Buscar Profissionais
-            </Link>
+          <nav className="hidden md:flex items-center gap-8">          
             <a href="#funcionalidades" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Funcionalidades
             </a>

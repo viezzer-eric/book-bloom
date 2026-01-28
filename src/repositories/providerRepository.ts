@@ -1,9 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const providerRepository = {
-  /**
-   * Retorna o número total de profissionais cadastrados na plataforma
-   */
+
   async countProviders(): Promise<number> {
     const { count, error } = await supabase
       .from('provider_profiles')
@@ -17,9 +15,6 @@ export const providerRepository = {
     return count ?? 0;
   },
 
-  /**
-   * Retorna todos os profissionais cadastrados
-   */
   async getAllProviders() {
     const { data, error } = await supabase
       .from('provider_profiles')
@@ -33,9 +28,6 @@ export const providerRepository = {
     return data;
   },
 
-  /**
-   * Retorna um profissional pelo ID
-   */
   async getProviderById(id: string) {
     const { data, error } = await supabase
       .from('provider_profiles')
@@ -51,16 +43,12 @@ export const providerRepository = {
     return data;
   },
 
-  /**
-   * Retorna um profissional pelo user_id
-   */
   async getProviderByUserId(userId: string) {
     const { data, error } = await supabase
       .from('provider_profiles')
       .select('*')
       .eq('user_id', userId)
       .single();
-
     if (error) {
       console.error('Erro ao buscar profissional:', error);
       throw error;

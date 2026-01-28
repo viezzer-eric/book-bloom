@@ -12,8 +12,8 @@ const Index = () => {
       <Header />
       <main className="pt-16">
         <Hero />
-        <Features />
-        <HowItWorks />
+        <Features id="funcionalidades" />
+        <HowItWorks id="como-funciona" />
         <CTA />
       </main>
       <Footer />

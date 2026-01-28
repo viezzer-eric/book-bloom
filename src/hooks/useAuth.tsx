@@ -36,22 +36,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         if (session?.user) {
-          // Use setTimeout to avoid Supabase auth deadlock
-          setTimeout(() => {
-            fetchUserRole(session.user.id);
-          }, 0);
+          fetchUserRole(session.user.id);
         } else {
           setUserRole(null);
         }
+
         setIsLoading(false);
-      }
-    );
+      });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -67,14 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string, role: 'provider' | 'client') => {
-    const redirectUrl = window.location.origin;
     
     const { data, error } = await supabase.auth.signUp({
       email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-      }
+      password
     });
 
     if (error) return { error };

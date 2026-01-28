@@ -1,13 +1,15 @@
-import { Calendar, CalendarCheck } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Calendar, CalendarCheck, LogOut, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { SearchBar } from "@/components/search/SearchBar";
 import { ProviderList } from "@/components/search/ProviderList";
 import { useProviderSearch } from "@/hooks/useProviderSearch";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 export default function SearchPage() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const {
     providers,
     isLoading,
@@ -18,7 +20,39 @@ export default function SearchPage() {
     serviceTypes,
   } = useProviderSearch();
 
+  const navigate = useNavigate();
+  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const hasFilters = searchTerm !== "" || selectedServiceType !== "";
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const fetchData = async () => {
+      try {
+        // Fetch profile
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('full_name')
+          .eq('user_id', user!.id)
+          .maybeSingle();
+        setProfile(profileData);
+        
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+   useEffect(() => {
+      if (user) {
+        fetchData();
+      }
+    }, [user]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -26,12 +60,12 @@ export default function SearchPage() {
       <header className="sticky top-0 z-40 bg-background/80 backdrop-blur-md border-b border-border">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
               <div className="w-9 h-9 rounded-lg gradient-hero flex items-center justify-center">
                 <Calendar className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-display font-semibold text-foreground">Bookly</span>
-            </Link>
+            </div>
 
             <Link to={user ? "/meus-agendamentos" : "/entrar"}>
               <Button variant="outline" className="rounded-xl gap-2">
@@ -39,7 +73,18 @@ export default function SearchPage() {
                 <span className="hidden sm:inline">Meus Agendamentos</span>
               </Button>
             </Link>
+            <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
+                  {profile?.full_name ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
+                </div>
+                <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                  <LogOut className="w-4 h-4" />
+                </Button>
+              </div>
           </div>
+          <div className="flex items-center gap-3">
+              
+            </div>
         </div>
       </header>
 
@@ -91,3 +136,4 @@ export default function SearchPage() {
     </div>
   );
 }
+

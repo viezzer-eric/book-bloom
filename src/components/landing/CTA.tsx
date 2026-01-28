@@ -16,12 +16,12 @@ export function CTA() {
               Pronto para simplificar seus agendamentos?
             </h2>
             <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 max-w-xl mx-auto">
-              Junte-se a milhares de profissionais que economizam horas toda semana com nossa plataforma intuitiva.
+              Junte-se a milhares de profissionais que economizam horas toda semana com nossa plataforma.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link to="/entrar?mode=register">
                 <Button variant="hero" size="xl" className="group">
-                  Começar Grátis
+                  Comece Agora
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </Button>
               </Link>

@@ -21,9 +21,9 @@ const steps = [
   },
 ];
 
-export function HowItWorks() {
+export function HowItWorks({ id }: { id?: string }) {
   return (
-    <section className="py-24 gradient-subtle">
+    <section className="py-24 gradient-subtle" id={id}>
       <div className="container mx-auto px-4">
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
