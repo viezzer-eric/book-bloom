@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, LogOut, User, Search } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { UserMenu } from '../components/common/UserMenu';
 
 interface Appointment {
   id: string;
@@ -64,15 +65,6 @@ export default function ClientDashboard() {
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', { 
       weekday: 'long', 
@@ -119,17 +111,10 @@ export default function ClientDashboard() {
               </div>
               <span className="text-xl font-display font-semibold text-foreground">Bookly</span>
             </div>
-            
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                  {profile?.full_name ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
-                </div>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+            <UserMenu
+              full_name={profile?.full_name}
+              onSignOut={signOut}
+            />
           </div>
         </div>
       </header>

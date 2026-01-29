@@ -114,38 +114,47 @@ export type Database = {
         Relationships: []
       }
       provider_profiles: {
-        Row: {
-          address: string | null
+        Row: {       
           business_name: string
-          city: string | null
           created_at: string
           description: string | null
           id: string
           updated_at: string
           user_id: string
           working_hours: Json | null
+          city: string
+          cep: string
+          state: string
+          neighboorhod: string
+          address: string 
         }
         Insert: {
-          address?: string | null
           business_name: string
-          city?: string | null
           created_at?: string
           description?: string | null
           id?: string
           updated_at?: string
           user_id: string
+          address: string
+          city: string
+          cep: string
+          state: string
+          neighboorhod: string
           working_hours?: Json | null
         }
         Update: {
-          address?: string | null
           business_name?: string
-          city?: string | null
           created_at?: string
           description?: string | null
           id?: string
           updated_at?: string
           user_id?: string
           working_hours?: Json | null
+          address: string
+          city: string
+          cep: string
+          state: string
+          neighboorhod: string
         }
         Relationships: []
       }

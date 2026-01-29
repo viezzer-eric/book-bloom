@@ -7,6 +7,7 @@ import { useProviderSearch } from "@/hooks/useProviderSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { UserMenu } from "@/components/common/UserMenu";
 
 export default function SearchPage() {
   const { user, signOut } = useAuth();
@@ -20,18 +21,8 @@ export default function SearchPage() {
     serviceTypes,
   } = useProviderSearch();
 
-  const navigate = useNavigate();
   const [profile, setProfile] = useState<{ full_name: string } | null>(null);
   const hasFilters = searchTerm !== "" || selectedServiceType !== "";
-
-  const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
 
   const fetchData = async () => {
       try {
@@ -73,14 +64,10 @@ export default function SearchPage() {
                 <span className="hidden sm:inline">Meus Agendamentos</span>
               </Button>
             </Link>
-            <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium">
-                  {profile?.full_name ? getInitials(profile.full_name) : <User className="w-4 h-4" />}
-                </div>
-                <Button variant="ghost" size="icon" onClick={handleSignOut}>
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
+            <UserMenu
+              full_name={profile?.full_name}
+              onSignOut={signOut}
+            />
           </div>
           <div className="flex items-center gap-3">
               

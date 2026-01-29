@@ -84,7 +84,6 @@ export default function Profile() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-
     try {
       // Update profile
       const { error: profileError } = await supabase
@@ -103,10 +102,8 @@ export default function Profile() {
           .from('provider_profiles')
           .update({
             business_name: providerData.businessName,
-            description: providerData.description,
-            address: providerData.address,
-            city: providerData.city,
-          })
+            description: providerData.description
+          } as any)
           .eq('user_id', user!.id);
 
         if (providerError) throw providerError;
@@ -205,62 +202,6 @@ export default function Profile() {
                 />
               </div>
             </div>
-
-            {/* Provider Info */}
-            {userRole === "provider" && (
-              <div className="p-6 rounded-xl bg-card border border-border space-y-4">
-                <div>
-                  <h3 className="font-semibold text-foreground">Dados do Negócio</h3>
-                  <p className="text-sm text-muted-foreground">Informações que aparecem para seus clientes</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="businessName">Nome do Negócio</Label>
-                  <Input
-                    id="businessName"
-                    type="text"
-                    value={providerData.businessName}
-                    onChange={(e) => setProviderData({ ...providerData, businessName: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Descrição</Label>
-                  <textarea
-                    id="description"
-                    rows={3}
-                    value={providerData.description}
-                    onChange={(e) => setProviderData({ ...providerData, description: e.target.value })}
-                    className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                    placeholder="Descreva seu negócio..."
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="address">Endereço</Label>
-                  <Input
-                    id="address"
-                    type="text"
-                    placeholder="Rua, número"
-                    value={providerData.address}
-                    onChange={(e) => setProviderData({ ...providerData, address: e.target.value })}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="city">Cidade</Label>
-                  <Input
-                    id="city"
-                    type="text"
-                    placeholder="São Paulo, SP"
-                    value={providerData.city}
-                    onChange={(e) => setProviderData({ ...providerData, city: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
-
             <Button type="submit" className="w-full" size="lg" disabled={isSaving}>
               {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Salvar Alterações
