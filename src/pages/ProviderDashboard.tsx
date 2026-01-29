@@ -11,7 +11,9 @@ import {
   Bell,
   Link as LinkIcon,
   LogOut,
-  User
+  User,
+  LayoutDashboard,
+  History
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +21,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/common/UserMenu";
 import { toast } from "sonner";
 import { ServicesTab } from "@/components/provider/ServicesTab";
+import { OverviewTab } from "@/components/provider/OverviewTab";
+import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
 
 interface Appointment {
   id: string;
@@ -66,7 +70,7 @@ interface ProviderProfile {
 export default function ProviderDashboard() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("agenda");
+  const [activeTab, setActiveTab] = useState("visao-geral");
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
@@ -283,12 +287,11 @@ const defaultWorkingHours: WorkingHours = {
           .order('created_at', { ascending: false });
         setServices(servicesData || []);
 
-        // Fetch appointments
+        // Fetch all appointments (we'll filter client-side for future/past)
         const { data: appointmentsData } = await supabase
           .from('appointments')
           .select('*, service:services(name, duration_minutes)')
           .eq('provider_id', providerData.id)
-          .gte('appointment_date', new Date().toISOString().split('T')[0])
           .order('appointment_date', { ascending: true })
           .order('start_time', { ascending: true });
         setAppointments(appointmentsData || []);
@@ -374,7 +377,8 @@ const defaultWorkingHours: WorkingHours = {
           <aside className="lg:w-64 flex-shrink-0">
             <nav className="space-y-1">
               {[
-                { id: "agenda", icon: Calendar, label: "Agenda" },
+                { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
+                { id: "agendamentos", icon: History, label: "Agendamentos" },
                 { id: "servicos", icon: Clock, label: "Serviços" },
                 { id: "clientes", icon: Users, label: "Clientes" },
                 { id: "configuracoes", icon: Settings, label: "Configurações" },
@@ -407,62 +411,12 @@ const defaultWorkingHours: WorkingHours = {
             )}
           </aside>
           <main className="flex-1">
-            {activeTab === "agenda" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-display font-bold text-foreground capitalize">{formattedDate}</h1>
-                    <p className="text-muted-foreground">
-                      {todayAppointments.length} {todayAppointments.length === 1 ? 'agendamento' : 'agendamentos'} hoje
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon">
-                      <ChevronLeft className="w-4 h-4" />
-                    </Button>
-                    <Button variant="outline" size="sm">Hoje</Button>
-                    <Button variant="outline" size="icon">
-                      <ChevronRight className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
+            {activeTab === "visao-geral" && (
+              <OverviewTab appointments={appointments} />
+            )}
 
-                <div className="space-y-3">
-                  {todayAppointments.length === 0 ? (
-                    <div className="text-center py-12 bg-card rounded-xl border border-border">
-                      <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="font-semibold text-foreground mb-2">Nenhum agendamento hoje</h3>
-                      <p className="text-muted-foreground">Compartilhe seu link de agendamento para receber novos clientes.</p>
-                    </div>
-                  ) : (
-                    todayAppointments.map((apt) => (
-                      <div 
-                        key={apt.id}
-                        className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-soft transition-all"
-                      >
-                        <div className="w-20 text-center">
-                          <span className="text-lg font-semibold text-foreground">{formatTime(apt.start_time)}</span>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="font-semibold text-card-foreground">{apt.client_name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {apt.service?.name || 'Serviço'} · {apt.service?.duration_minutes || 60} min
-                          </p>
-                        </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          apt.status === 'confirmed' 
-                            ? 'bg-primary/10 text-primary' 
-                            : apt.status === 'pending'
-                            ? 'bg-accent/10 text-accent'
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {getStatusLabel(apt.status)}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+            {activeTab === "agendamentos" && (
+              <AppointmentsHistoryTab appointments={appointments} />
             )}
 
             {activeTab === "servicos" && providerProfile && (
@@ -470,6 +424,7 @@ const defaultWorkingHours: WorkingHours = {
                 services={services} 
                 providerId={providerProfile.id}
                 onServiceAdded={fetchData}
+                onServiceUpdated={fetchData}
               />
             )}
 
