@@ -125,8 +125,9 @@ export type Database = {
           city: string
           cep: string
           state: string
-          neighboorhod: string
+          neighborhood: string
           address: string 
+          addressNumber: string
         }
         Insert: {
           business_name: string
@@ -139,8 +140,9 @@ export type Database = {
           city: string
           cep: string
           state: string
-          neighboorhod: string
+          neighborhood: string
           working_hours?: Json | null
+          addressNumber: string;
         }
         Update: {
           business_name?: string
@@ -154,7 +156,8 @@ export type Database = {
           city: string
           cep: string
           state: string
-          neighboorhod: string
+          neighborhood: string
+          addressNumber: string
         }
         Relationships: []
       }

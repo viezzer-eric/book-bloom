@@ -57,7 +57,8 @@ interface ProviderProfile {
   cep: string;
   state: string;
   city: string;
-  neighboorhod: string;
+  neighborhood: string;
+  addressNumber: string;
 }
 
 export default function ProviderDashboard() {
@@ -74,8 +75,29 @@ export default function ProviderDashboard() {
   const [cep, setCep] = useState<string>(""); 
   const [viacep, setViaCep] = useState<ViaCepResponse>(); 
   const [businessName, setBusinessName] = useState<string>("");
-  const [adressNumber, setAdressNumber] = useState<string>("");
+  const [addressNumber, setaddressNumber] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const [bairro, setBairro] = useState<string>("");
+  const [rua, setRua] = useState<string>("");
+  const [cidade, setCidade] = useState<string>("");
+  const [uf, setUf] = useState<string>("");
+
+const defaultWorkingHours: WorkingHours = {
+    Segunda: { open: "09:00", close: "18:00", closed: false },
+    Terça: { open: "09:00", close: "18:00", closed: false },
+    Quarta: { open: "09:00", close: "18:00", closed: false },
+    Quinta: { open: "09:00", close: "18:00", closed: false },
+    Sexta: { open: "09:00", close: "18:00", closed: false },
+    Sábado: { open: null, close: null, closed: true },
+    Domingo: { open: null, close: null, closed: true },
+  };
+
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(() => {
+    if (!providerProfile?.working_hours) {
+      return defaultWorkingHours;
+    }
+    return providerProfile.working_hours as WorkingHours;
+  });
 
   async function fetchAddressByCep(cep: string) {
     const cleanCep = cep.replace(/\D/g, '');
@@ -121,20 +143,6 @@ export default function ProviderDashboard() {
     [day: string]: WorkingHoursDay;
   };
 
-  const defaultWorkingHours: WorkingHours = {
-    Segunda: { open: "09:00", close: "18:00", closed: false },
-    Terça: { open: "09:00", close: "18:00", closed: false },
-    Quarta: { open: "09:00", close: "18:00", closed: false },
-    Quinta: { open: "09:00", close: "18:00", closed: false },
-    Sexta: { open: "09:00", close: "18:00", closed: false },
-    Sábado: { open: null, close: null, closed: true },
-    Domingo: { open: null, close: null, closed: true },
-  };
-
-  const [workingHours, setWorkingHours] = useState<WorkingHours>(
-    providerProfile?.working_hours ?? defaultWorkingHours
-  );
-
   useEffect(() => {
     if (!authLoading && !user) {
       navigate("/entrar");
@@ -149,6 +157,36 @@ export default function ProviderDashboard() {
     }
   }, [user]);
 
+  useEffect(() => {
+  if (providerProfile?.business_name) {
+    setBusinessName(providerProfile.business_name);
+  }
+  if (providerProfile?.cep) {
+    setCep(providerProfile.cep);
+  }
+  if (providerProfile?.addressNumber) {
+    setaddressNumber(providerProfile.addressNumber);
+  }
+  if(providerProfile?.address){
+    setRua(providerProfile.address)
+  }
+  if(providerProfile?.city){
+    setCidade(providerProfile.city)
+  }
+  if(providerProfile?.state){
+    setUf(providerProfile.state)
+  }
+  if(providerProfile?.neighborhood){
+    setBairro(providerProfile.neighborhood)
+  }
+  if(providerProfile?.description){
+    setDescription(providerProfile.description)
+  }
+  if(providerProfile?.working_hours){
+    setWorkingHours(providerProfile.working_hours)
+  }
+}, [providerProfile]);
+
   const updateProviderData = async () => {
     
     if(!cep){
@@ -161,34 +199,51 @@ export default function ProviderDashboard() {
       return;
     }
 
-    if(!viacep.logradouro){
-      toast.error("Cep precisa ser valido!")
-      return;
-    }
-
-    if(!adressNumber){
+    if(!addressNumber){
       toast.error("Numero de Endereco precisa estar preenchido")
       return;
     }
 
-    var completeAddress = viacep.logradouro + ", " + adressNumber;
+    if(!viacep){
+      const { error } = await supabase
+        .from("provider_profiles")
+        .update({
+          business_name: businessName,
+          description,
+          addressNumber,
+          working_hours: workingHours,
+          updated_at: new Date().toISOString(),
+        } as any)
+        .eq("user_id", user!.id);
 
-    const updateData = {
+      if (error) {
+        toast.error("Erro ao atualizar perfil");
+        throw error;
+      }
+
+      toast.success("Perfil atualizado com sucesso");
+    }
+
+    const upsertData = {
+      user_id: user!.id, 
       business_name: businessName,
       description,
-      completeAddress,
-      city: viacep.logradouro,
+      address: viacep.logradouro,
+      city: viacep.localidade,
       state: viacep.uf,
       cep,
-      neighboorhod: viacep.bairro,
+      addressNumber: addressNumber,
+      neighborhood: viacep.bairro,
       working_hours: workingHours,
       updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
     };
 
     const { error } = await supabase
     .from("provider_profiles")
-    .update({updateData} as any)
-    .eq("user_id", user!.id);
+    .upsert(upsertData, {
+      onConflict: "user_id",
+    });
 
     if (error) {
       toast.error("Erro ao atualizar perfil");
@@ -247,6 +302,16 @@ export default function ProviderDashboard() {
     return time.slice(0, 5);
   };
 
+  const weekOrder = [
+  "Segunda",
+  "Terça",
+  "Quarta",
+  "Quinta",
+  "Sexta",
+  "Sábado",
+  "Domingo",
+];
+
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
       pending: 'Pendente',
@@ -293,7 +358,7 @@ export default function ProviderDashboard() {
                 )}
               </Button>
                <UserMenu
-                  full_name={profile.full_name}
+                  full_name={profile?.full_name}
                   onSignOut={signOut}
                 />
             </div>
@@ -470,7 +535,7 @@ export default function ProviderDashboard() {
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Nome do Negócio<span className="text-red-500">*</span></label>
                         <input 
                           type="text" 
-                          value={providerProfile?.business_name || businessName || ""}
+                          value={businessName}
                           onChange={e => setBusinessName(e.target.value)}
                           placeholder="Nome da sua Empresa"
                           className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -481,7 +546,7 @@ export default function ProviderDashboard() {
                         <input 
                           type="text" 
                           inputMode="numeric"
-                          value={providerProfile?.cep || cep || viacep?.cep} 
+                          value={cep} 
                           onChange={e => setCep(cepMask(e.target.value))}
                           onBlur={() => fetchAddressByCep(cep)}
                           placeholder="00000-000"
@@ -496,7 +561,7 @@ export default function ProviderDashboard() {
                           <input
                             disabled
                             type="text"
-                            defaultValue={providerProfile?.address || viacep?.logradouro || ""}
+                            value={rua}
                             className="px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full"
                           />
                         </div>
@@ -507,8 +572,8 @@ export default function ProviderDashboard() {
                           <input
                             type="text" 
                             inputMode="numeric"
-                            value={adressNumber}
-                            onChange={e => setAdressNumber(e.target.value)}
+                            value={addressNumber}
+                            onChange={e => setaddressNumber(e.target.value)}
                             className="px-2 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full"
                           />
                         </div>
@@ -518,7 +583,7 @@ export default function ProviderDashboard() {
                         <input 
                           disabled
                           type="text" 
-                          defaultValue={viacep?.localidade || providerProfile?.city || ""}
+                          value={cidade}
                           className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
@@ -527,7 +592,7 @@ export default function ProviderDashboard() {
                         <input 
                           disabled
                           type="text" 
-                          defaultValue={providerProfile?.state || viacep?.localidade || ""}
+                          value={uf}
                           className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
@@ -536,7 +601,7 @@ export default function ProviderDashboard() {
                         <input
                           disabled
                           type="text" 
-                          defaultValue={providerProfile?.neighboorhod || viacep?.bairro || ""}
+                          value={bairro}
                           className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
@@ -544,7 +609,7 @@ export default function ProviderDashboard() {
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Descrição</label>
                         <textarea 
                           rows={3}
-                          defaultValue={providerProfile?.description || description || ""}
+                          value={description}
                           onChange={e => setDescription(e.target.value)}
                           className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                           placeholder="Descreva seu negócio..."
@@ -557,62 +622,68 @@ export default function ProviderDashboard() {
                       Horário de Funcionamento
                     </h3>
                     <div className="space-y-3">
-                      {Object.entries(workingHours).map(([day, data]) => (
-                        <div key={day} className="flex items-center gap-4">
-                          <span className="w-24 text-muted-foreground">{day}</span>
-                          {!data.closed && (
-                            <>
+                      {weekOrder.map((day) => {
+                        const data = workingHours[day];
+                        if (!data) return null;
+
+                        return (
+                          <div key={day} className="flex items-center gap-4">
+                            <span className="w-24 text-muted-foreground">{day}</span>
+
+                            {!data.closed && (
+                              <>
+                                <input
+                                  type="time"
+                                  value={data.open ?? ""}
+                                  onChange={(e) =>
+                                    setWorkingHours((prev) => ({
+                                      ...prev,
+                                      [day]: { ...prev[day], open: e.target.value },
+                                    }))
+                                  }
+                                  className="px-2 py-1 rounded-md border border-input bg-background"
+                                />
+
+                                <span className="text-muted-foreground">–</span>
+
+                                <input
+                                  type="time"
+                                  value={data.close ?? ""}
+                                  onChange={(e) =>
+                                    setWorkingHours((prev) => ({
+                                      ...prev,
+                                      [day]: { ...prev[day], close: e.target.value },
+                                    }))
+                                  }
+                                  className="px-2 py-1 rounded-md border border-input bg-background"
+                                />
+                              </>
+                            )}
+
+                            {data.closed && (
+                              <span className="text-muted-foreground">Fechado</span>
+                            )}
+
+                            <label className="ml-auto flex items-center gap-2 text-sm">
                               <input
-                                type="time"
-                                value={data.open ?? ""}
+                                type="checkbox"
+                                checked={data.closed}
                                 onChange={(e) =>
                                   setWorkingHours((prev) => ({
                                     ...prev,
-                                    [day]: { ...data, open: e.target.value },
+                                    [day]: {
+                                      open: e.target.checked ? null : "09:00",
+                                      close: e.target.checked ? null : "18:00",
+                                      closed: e.target.checked,
+                                    },
                                   }))
                                 }
-                                className="px-2 py-1 rounded-md border border-input bg-background"
                               />
-
-                              <span className="text-muted-foreground">–</span>
-
-                              <input
-                                type="time"
-                                value={data.close ?? ""}
-                                onChange={(e) =>
-                                  setWorkingHours((prev) => ({
-                                    ...prev,
-                                    [day]: { ...data, close: e.target.value },
-                                  }))
-                                }
-                                className="px-2 py-1 rounded-md border border-input bg-background"
-                              />
-                            </>
-                          )}
-
-                          {data.closed && (
-                            <span className="text-muted-foreground">Fechado</span>
-                          )}
-
-                          <label className="ml-auto flex items-center gap-2 text-sm">
-                            <input
-                              type="checkbox"
-                              checked={data.closed}
-                              onChange={(e) =>
-                                setWorkingHours((prev) => ({
-                                  ...prev,
-                                  [day]: {
-                                    open: e.target.checked ? null : "09:00",
-                                    close: e.target.checked ? null : "18:00",
-                                    closed: e.target.checked,
-                                  },
-                                }))
-                              }
-                            />
-                            Fechado
-                          </label>
-                        </div>
-                      ))}
+                              Fechado
+                            </label>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                   <Button onClick={() => updateProviderData()}>Salvar Alterações</Button>
