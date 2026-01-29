@@ -28,11 +28,13 @@ interface ServicesTabProps {
   services: Service[];
   providerId: string;
   onServiceAdded: () => void;
+  onServiceUpdated: () => void;
 }
 
-export function ServicesTab({ services, providerId, onServiceAdded }: ServicesTabProps) {
+export function ServicesTab({ services, providerId, onServiceAdded, onServiceUpdated }: ServicesTabProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [togglingServiceId, setTogglingServiceId] = useState<string | null>(null);
   
   // Form state
   const [name, setName] = useState("");
@@ -113,6 +115,32 @@ export function ServicesTab({ services, providerId, onServiceAdded }: ServicesTa
     });
   };
 
+  const handleToggleStatus = async (serviceId: string, currentActive: boolean) => {
+    setTogglingServiceId(serviceId);
+    try {
+      const { error } = await supabase
+        .from("services")
+        .update({ active: !currentActive })
+        .eq("id", serviceId);
+
+      if (error) {
+        console.error("Error toggling service status:", error);
+        toast.error("Erro ao alterar status do serviço");
+        return;
+      }
+
+      toast.success(
+        !currentActive ? "Serviço ativado com sucesso!" : "Serviço desativado com sucesso!"
+      );
+      onServiceUpdated();
+    } catch (error) {
+      console.error("Error toggling service status:", error);
+      toast.error("Erro ao alterar status do serviço");
+    } finally {
+      setTogglingServiceId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -163,9 +191,17 @@ export function ServicesTab({ services, providerId, onServiceAdded }: ServicesTa
                 )}
                 <p className="text-sm text-muted-foreground mt-1">{service.duration_minutes} min</p>
               </div>
-              <span className="text-lg font-semibold text-foreground">
-                {formatPrice(service.price)}
-              </span>
+              <div className="flex items-center gap-4">
+                <span className="text-lg font-semibold text-foreground">
+                  {formatPrice(service.price)}
+                </span>
+                <Switch
+                  checked={service.active}
+                  onCheckedChange={() => handleToggleStatus(service.id, service.active)}
+                  disabled={togglingServiceId === service.id}
+                  aria-label={service.active ? "Desativar serviço" : "Ativar serviço"}
+                />
+              </div>
             </div>
           ))
         )}
