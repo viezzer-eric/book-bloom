@@ -116,33 +116,45 @@ export type Database = {
       provider_profiles: {
         Row: {
           address: string | null
+          addressNumber: string | null
           business_name: string
+          cep: string | null
           city: string | null
           created_at: string
           description: string | null
           id: string
+          neighborhood: string | null
+          state: string | null
           updated_at: string
           user_id: string
           working_hours: Json | null
         }
         Insert: {
           address?: string | null
+          addressNumber?: string | null
           business_name: string
+          cep?: string | null
           city?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          neighborhood?: string | null
+          state?: string | null
           updated_at?: string
           user_id: string
           working_hours?: Json | null
         }
         Update: {
           address?: string | null
+          addressNumber?: string | null
           business_name?: string
+          cep?: string | null
           city?: string | null
           created_at?: string
           description?: string | null
           id?: string
+          neighborhood?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string
           working_hours?: Json | null

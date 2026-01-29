@@ -18,6 +18,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from "@/components/common/UserMenu";
 import { toast } from "sonner";
+import { ServicesTab } from "@/components/provider/ServicesTab";
 
 interface Appointment {
   id: string;
@@ -46,6 +47,7 @@ interface Service {
   duration_minutes: number;
   price: number;
   description: string | null;
+  active: boolean;
 }
 
 interface ProviderProfile {
@@ -273,12 +275,12 @@ const defaultWorkingHours: WorkingHours = {
       setProviderProfile(providerData);
 
       if (providerData) {
-        // Fetch services
+        // Fetch services (including inactive ones for management)
         const { data: servicesData } = await supabase
           .from('services')
           .select('*')
           .eq('provider_id', providerData.id)
-          .eq('active', true);
+          .order('created_at', { ascending: false });
         setServices(servicesData || []);
 
         // Fetch appointments
@@ -463,44 +465,12 @@ const defaultWorkingHours: WorkingHours = {
               </div>
             )}
 
-            {activeTab === "servicos" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-display font-bold text-foreground">Serviços</h1>
-                    <p className="text-muted-foreground">Gerencie seus serviços oferecidos</p>
-                  </div>
-                  <Button>
-                    <Plus className="w-4 h-4 mr-2" />
-                    Adicionar Serviço
-                  </Button>
-                </div>
-
-                <div className="grid gap-4">
-                  {services.length === 0 ? (
-                    <div className="text-center py-12 bg-card rounded-xl border border-border">
-                      <Clock className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="font-semibold text-foreground mb-2">Nenhum serviço cadastrado</h3>
-                      <p className="text-muted-foreground">Adicione seus serviços para que os clientes possam agendar.</p>
-                    </div>
-                  ) : (
-                    services.map((service) => (
-                      <div 
-                        key={service.id}
-                        className="flex items-center justify-between p-4 rounded-xl bg-card border border-border hover:border-primary/30 transition-colors"
-                      >
-                        <div>
-                          <h3 className="font-semibold text-card-foreground">{service.name}</h3>
-                          <p className="text-sm text-muted-foreground">{service.duration_minutes} min</p>
-                        </div>
-                        <span className="text-lg font-semibold text-foreground">
-                          R$ {service.price.toFixed(2).replace('.', ',')}
-                        </span>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+            {activeTab === "servicos" && providerProfile && (
+              <ServicesTab 
+                services={services} 
+                providerId={providerProfile.id}
+                onServiceAdded={fetchData}
+              />
             )}
 
             {activeTab === "clientes" && (
