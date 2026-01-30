@@ -13,7 +13,7 @@ interface Provider {
   id: string;
   business_name: string;
   description: string | null;
-  city: string | null;
+  address: string | null;
   services: Service[];
 }
 
@@ -81,7 +81,7 @@ export function ProviderList({ providers, isLoading, hasFilters }: ProviderListP
           id={provider.id}
           businessName={provider.business_name}
           description={provider.description}
-          city={provider.city}
+          address={provider.address}
           services={provider.services}
         />
       ))}

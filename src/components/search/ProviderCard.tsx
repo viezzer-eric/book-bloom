@@ -14,7 +14,7 @@ interface ProviderCardProps {
   id: string;
   businessName: string;
   description: string | null;
-  city: string | null;
+  address: string | null;
   services: Service[];
 }
 
@@ -22,7 +22,7 @@ export function ProviderCard({
   id,
   businessName,
   description,
-  city,
+  address,
   services,
 }: ProviderCardProps) {
   const minPrice = services.length > 0 
@@ -50,10 +50,10 @@ export function ProviderCard({
           )}
 
           {/* Localização */}
-          {city && (
+          {address && (
             <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4" />
-              <span>{city}</span>
+              <span>{address}</span>
             </div>
           )}
 

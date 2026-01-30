@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,6 +111,12 @@ export default function ClientDashboard() {
               </div>
               <span className="text-xl font-display font-semibold text-foreground">Bookly</span>
             </div>
+            <Link to={"/buscar"}>
+              <Button variant="outline" className="rounded-xl gap-2">
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Buscar Profissionais</span>
+              </Button>
+            </Link>
             <UserMenu
               full_name={profile?.full_name}
               onSignOut={signOut}

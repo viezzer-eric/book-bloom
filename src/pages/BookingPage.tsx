@@ -23,33 +23,26 @@ interface ProviderProfile {
   working_hours: any;
 }
 
-const timeSlots = [
-  "09:00", "10:00", "11:00", "13:00", "14:00", "15:00", "16:00", "17:00"
-];
 
-const generateCalendarDays = () => {
-  const today = new Date();
-  const days = [];
-  for (let i = 0; i < 14; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
-    days.push({
-      date,
-      dayName: date.toLocaleDateString('pt-BR', { weekday: 'short' }),
-      dayNumber: date.getDate(),
-      isToday: i === 0,
-      available: i !== 0 && i !== 7,
-    });
-  }
-  return days;
+
+const weekDayMap: Record<string, string> = {
+  dom: "Domingo",
+  seg: "Segunda",
+  ter: "Terça",
+  qua: "Quarta",
+  qui: "Quinta",
+  sex: "Sexta",
+  sáb: "Sábado",
 };
+
+
 
 export default function BookingPage() {
   const { providerId } = useParams<{ providerId: string }>();
   const { user } = useAuth();
   
   const [step, setStep] = useState(1);
-  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
@@ -59,6 +52,70 @@ export default function BookingPage() {
   
   const [provider, setProvider] = useState<ProviderProfile | null>(null);
   const [services, setServices] = useState<Service[]>([]);
+
+    function generateTimeSlots(
+    open: string | null,
+    close: string | null,
+    intervalMinutes = selectedService.duration_minutes
+  ): string[] {
+    if (!open || !close) return [];
+
+    const slots: string[] = [];
+
+    const [openH, openM] = open.split(":").map(Number);
+    const [closeH, closeM] = close.split(":").map(Number);
+
+    let current = new Date();
+    current.setHours(openH, openM, 0, 0);
+
+    const end = new Date();
+    end.setHours(closeH, closeM, 0, 0);
+
+    while (current < end) {
+      const hours = String(current.getHours()).padStart(2, "0");
+      const minutes = String(current.getMinutes()).padStart(2, "0");
+      slots.push(`${hours}:${minutes}`);
+
+      current.setMinutes(current.getMinutes() + intervalMinutes);
+    }
+
+    return slots;
+  }
+
+
+  const generateCalendarDays = () => {
+  const today = new Date();
+  const days = [];
+
+  for (let i = 0; i < 14; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+
+    const shortDay = date
+      .toLocaleDateString("pt-BR", { weekday: "short" })
+      .replace(".", "")
+      .toLowerCase();
+
+    const weekDayName = weekDayMap[shortDay];
+    const dayConfig = provider?.working_hours[weekDayName];
+
+    const available =
+      i !== 0 && 
+      !!dayConfig &&
+      !dayConfig.closed &&
+      !!dayConfig.open &&
+      !!dayConfig.close;
+
+    days.push({
+      date,
+      dayName: shortDay,
+      dayNumber: date.getDate(),
+      isToday: i === 0,
+      available,
+    });
+  }
+  return days;
+};
 
   const calendarDays = generateCalendarDays();
 
@@ -98,12 +155,20 @@ export default function BookingPage() {
     }
   };
 
+  const selectedDay = calendarDays[selectedDate];
+
+  const dayConfig = provider?.working_hours[weekDayMap[selectedDay?.dayName]];
+
+  const timeSlots = dayConfig && !dayConfig.closed
+  ? generateTimeSlots(dayConfig.open, dayConfig.close)
+  : [];
+
   const handleSubmit = async () => {
     if (!provider || !selectedService || selectedDate === null || !selectedTime) return;
     
     setIsSubmitting(true);
     try {
-      const selectedServiceData = services.find(s => s.id === selectedService);
+      const selectedServiceData = services.find(s => s.id === selectedService.id);
       const appointmentDate = calendarDays[selectedDate].date.toISOString().split('T')[0];
       const endTime = calculateEndTime(selectedTime, selectedServiceData?.duration_minutes || 60);
 
@@ -112,7 +177,7 @@ export default function BookingPage() {
         .insert({
           provider_id: provider.id,
           client_id: user?.id || null,
-          service_id: selectedService,
+          service_id: selectedService.id,
           client_name: formData.name,
           client_email: formData.email,
           client_phone: formData.phone,
@@ -160,7 +225,7 @@ export default function BookingPage() {
         <div className="text-center">
           <h1 className="text-2xl font-display font-bold text-foreground mb-2">Profissional não encontrado</h1>
           <p className="text-muted-foreground mb-6">O link de agendamento pode estar incorreto.</p>
-          <Link to="/">
+          <Link to="/buscar">
             <Button>Voltar para Início</Button>
           </Link>
         </div>
@@ -169,7 +234,7 @@ export default function BookingPage() {
   }
 
   if (isBooked) {
-    const selectedServiceData = services.find(s => s.id === selectedService);
+    const selectedServiceData = services.find(s => s.id === selectedService.id);
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center animate-scale-in">
@@ -267,9 +332,9 @@ export default function BookingPage() {
                 services.map((service) => (
                   <button
                     key={service.id}
-                    onClick={() => setSelectedService(service.id)}
+                    onClick={() => setSelectedService(service)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                      selectedService === service.id
+                      selectedService.id === service.id
                         ? "border-primary bg-primary/5 shadow-soft"
                         : "border-border bg-card hover:border-primary/30"
                     }`}
@@ -392,13 +457,13 @@ export default function BookingPage() {
               <h3 className="font-semibold text-foreground mb-2">Resumo do Agendamento</h3>
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">{services.find(s => s.id === selectedService)?.name}</span>
+                  <span className="font-medium text-foreground">{services.find(s => s.id === selectedService.id)?.name}</span>
                 </p>
                 <p className="text-muted-foreground capitalize">
                   {calendarDays[selectedDate!]?.date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
                 </p>
                 <p className="text-lg font-semibold text-foreground mt-2">
-                  {formatPrice(services.find(s => s.id === selectedService)?.price || 0)}
+                  {formatPrice(services.find(s => s.id === selectedService.id)?.price || 0)}
                 </p>
               </div>
             </div>
