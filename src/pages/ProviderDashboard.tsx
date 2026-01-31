@@ -32,6 +32,7 @@ interface Appointment {
   start_time: string;
   end_time: string;
   status: string;
+  profiles?: { avatar_url: string };
   service?: { name: string; duration_minutes: number } | null;
 }
 
@@ -66,6 +67,18 @@ interface ProviderProfile {
   neighborhood: string;
   addressNumber: string;
 }
+
+interface ClientAppointment {
+  id: string;
+  client_name: string;
+  client_email: string;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  status: string;
+  service?: { name: string; duration_minutes: number } | null;
+}
+
 
 export default function ProviderDashboard() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
@@ -303,10 +316,6 @@ const defaultWorkingHours: WorkingHours = {
     }
   };
 
-  const formatTime = (time: string) => {
-    return time.slice(0, 5);
-  };
-
   const weekOrder = [
   "Segunda",
   "Terça",
@@ -316,16 +325,6 @@ const defaultWorkingHours: WorkingHours = {
   "Sábado",
   "Domingo",
 ];
-
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, string> = {
-      pending: 'Pendente',
-      confirmed: 'Confirmado',
-      cancelled: 'Cancelado',
-      completed: 'Concluído'
-    };
-    return labels[status] || status;
-  };
 
   if (authLoading || isLoading) {
     return (
@@ -412,7 +411,7 @@ const defaultWorkingHours: WorkingHours = {
           </aside>
           <main className="flex-1">
             {activeTab === "visao-geral" && (
-              <OverviewTab appointments={appointments} />
+              <OverviewTab appointments={appointments} onStatusChange={fetchData}/>
             )}
 
             {activeTab === "agendamentos" && (

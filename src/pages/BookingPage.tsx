@@ -45,7 +45,17 @@ export default function BookingPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ name: "", email: "", phone: "", notes: "" });
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    notes: '',
+  });
+  const [initialFormData, setinitialFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+  });
   const [isBooked, setIsBooked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -147,13 +157,44 @@ export default function BookingPage() {
         .select('*')
         .eq('provider_id', providerId)
         .eq('active', true);
-      setServices(servicesData || []);
+      setServices(servicesData || []);  
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
+  function formatPhone(value) {
+    if(!value) return;
+
+    const digits = value.replace(/\D/g, "");
+
+  // Aplica a máscara (11) 99999-9999
+  if (digits.length <= 2) return `(${digits}`;
+  if (digits.length <= 7) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
+}
+
+  useEffect(() => {
+  const loadProfile = async () => {
+    const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('email', user!.email)
+        .maybeSingle();
+
+      if (profileData) {
+        setinitialFormData({
+          name: profileData.full_name || "",
+          email: profileData.email || "",
+          phone: profileData.phone || "",
+        });
+      }
+  };
+
+  loadProfile();
+}, [user]);
 
   const selectedDay = calendarDays[selectedDate];
 
@@ -168,7 +209,7 @@ export default function BookingPage() {
     
     setIsSubmitting(true);
     try {
-      const selectedServiceData = services.find(s => s.id === selectedService.id);
+      const selectedServiceData = services.find(s => s.id === selectedService?.id);
       const appointmentDate = calendarDays[selectedDate].date.toISOString().split('T')[0];
       const endTime = calculateEndTime(selectedTime, selectedServiceData?.duration_minutes || 60);
 
@@ -177,7 +218,7 @@ export default function BookingPage() {
         .insert({
           provider_id: provider.id,
           client_id: user?.id || null,
-          service_id: selectedService.id,
+          service_id: selectedService?.id,
           client_name: formData.name,
           client_email: formData.email,
           client_phone: formData.phone,
@@ -234,7 +275,7 @@ export default function BookingPage() {
   }
 
   if (isBooked) {
-    const selectedServiceData = services.find(s => s.id === selectedService.id);
+    const selectedServiceData = services.find(s => s.id === selectedService?.id);
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-md w-full text-center animate-scale-in">
@@ -253,7 +294,7 @@ export default function BookingPage() {
               {calendarDays[selectedDate!]?.date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
             </p>
           </div>
-          <Link to="/">
+          <Link to="/meus-agendamentos">
             <Button variant="outline">Voltar para Início</Button>
           </Link>
         </div>
@@ -334,7 +375,7 @@ export default function BookingPage() {
                     key={service.id}
                     onClick={() => setSelectedService(service)}
                     className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                      selectedService.id === service.id
+                      selectedService?.id === service.id
                         ? "border-primary bg-primary/5 shadow-soft"
                         : "border-border bg-card hover:border-primary/30"
                     }`}
@@ -457,13 +498,13 @@ export default function BookingPage() {
               <h3 className="font-semibold text-foreground mb-2">Resumo do Agendamento</h3>
               <div className="space-y-1 text-sm">
                 <p className="text-muted-foreground">
-                  <span className="font-medium text-foreground">{services.find(s => s.id === selectedService.id)?.name}</span>
+                  <span className="font-medium text-foreground">{services.find(s => s.id === selectedService?.id)?.name}</span>
                 </p>
                 <p className="text-muted-foreground capitalize">
                   {calendarDays[selectedDate!]?.date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })} às {selectedTime}
                 </p>
                 <p className="text-lg font-semibold text-foreground mt-2">
-                  {formatPrice(services.find(s => s.id === selectedService.id)?.price || 0)}
+                  {formatPrice(services.find(s => s.id === selectedService?.id)?.price || 0)}
                 </p>
               </div>
             </div>
@@ -474,7 +515,8 @@ export default function BookingPage() {
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Nome Completo *</label>
                 <input 
                   type="text" 
-                  value={formData.name}
+                  value={formData.name || initialFormData.name}
+                  disabled={!!initialFormData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Seu nome completo"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -484,7 +526,8 @@ export default function BookingPage() {
                 <label className="block text-sm font-medium text-muted-foreground mb-1">E-mail *</label>
                 <input 
                   type="email" 
-                  value={formData.email}
+                  value={initialFormData.email || formData.email}
+                  disabled={!!initialFormData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="seu@email.com"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -494,8 +537,9 @@ export default function BookingPage() {
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Telefone *</label>
                 <input 
                   type="tel" 
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  value={formatPhone(initialFormData.phone) || formatPhone(formData.phone)}
+                  disabled={!!initialFormData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
                   placeholder="(11) 99999-9999"
                   className="w-full px-4 py-3 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
@@ -516,7 +560,12 @@ export default function BookingPage() {
               size="lg" 
               variant="hero"
               className="w-full"
-              disabled={!formData.name || !formData.email || !formData.phone || isSubmitting}
+              disabled={
+                  // desabilita se não tiver formData completo e também não tiver initialFormData completo, ou se estiver submetendo
+                  !( (formData.name && formData.email && formData.phone) || 
+                    (initialFormData.name && initialFormData.email && initialFormData.phone) ) 
+                  || isSubmitting
+                }              
               onClick={handleSubmit}
             >
               {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}

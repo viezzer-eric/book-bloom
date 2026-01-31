@@ -1,4 +1,7 @@
 import { Calendar, Clock } from "lucide-react";
+import StatusBadge from "../common/ChangeAppointments";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Appointment {
   id: string;
@@ -13,9 +16,10 @@ interface Appointment {
 
 interface OverviewTabProps {
   appointments: Appointment[];
+  onStatusChange: () => void;
 }
 
-export function OverviewTab({ appointments }: OverviewTabProps) {
+export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) {
   const formatTime = (time: string) => time.slice(0, 5);
 
   const formatDate = (dateStr: string) => {
@@ -108,13 +112,22 @@ export function OverviewTab({ appointments }: OverviewTabProps) {
                   {apt.service?.duration_minutes || 60} min
                 </p>
               </div>
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusClasses(
-                  apt.status
-                )}`}
-              >
-                {getStatusLabel(apt.status)}
-              </span>
+                <StatusBadge
+                status={apt.status}
+                onChange={async (newStatus) => {
+                  const { error } = await supabase
+                    .from("appointments")
+                    .update({ status: newStatus })
+                    .eq("id", apt.id);
+
+                  if (error) {
+                    toast.error("Erro ao atualizar status");
+                  } else {
+                    toast.success("Status atualizado");
+                    onStatusChange();
+                  }
+                }}
+              />
             </div>
           ))
         )}
