@@ -7,12 +7,25 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import AvatarUpload from "@/components/common/AvatarUpload";
+
+export interface Profile {
+  avatar_url: string;
+  created_at: string;
+  email: string;
+  full_name: string;
+  id: string;
+  phone: string;
+  updated_at: string;
+  user_id: string;
+}
 
 export default function Profile() {
-  const { user, userRole, isLoading: authLoading } = useAuth();
+  const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [profilerData, setProfilerData] = useState<Profile>(null);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -48,6 +61,7 @@ export default function Profile() {
         .select('*')
         .eq('user_id', user!.id)
         .maybeSingle();
+      setProfilerData(profileData);
 
       if (profileData) {
         setFormData({
@@ -137,12 +151,12 @@ export default function Profile() {
                   <ArrowLeft className="w-5 h-5" />
                 </Button>
               </Link>
-              <Link to="/" className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-lg gradient-hero flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-primary-foreground" />
                 </div>
                 <span className="text-xl font-display font-semibold text-foreground">Bookly</span>
-              </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -160,7 +174,7 @@ export default function Profile() {
             <div className="p-6 rounded-xl bg-card border border-border space-y-4">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-8 h-8 text-primary" />
+                  <AvatarUpload profileData={profilerData} onSignOut={signOut}></AvatarUpload>
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Dados Pessoais</h3>

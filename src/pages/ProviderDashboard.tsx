@@ -23,6 +23,9 @@ import { toast } from "sonner";
 import { ServicesTab } from "@/components/provider/ServicesTab";
 import { OverviewTab } from "@/components/provider/OverviewTab";
 import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
+import NotificationBell from "@/components/common/NotificationBell";
+import AvatarUpload from "@/components/common/AvatarUpload";
+import { Profile } from "./Profile";
 
 interface Appointment {
   id: string;
@@ -87,7 +90,7 @@ export default function ProviderDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
-  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const today = new Date();
   const formattedDate = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -120,7 +123,7 @@ const defaultWorkingHours: WorkingHours = {
 
   async function fetchAddressByCep(cep: string) {
     const cleanCep = cep.replace(/\D/g, '');
-
+    
     if (cleanCep.length !== 8) {
       throw new Error('CEP inválido');
     }
@@ -278,7 +281,7 @@ const defaultWorkingHours: WorkingHours = {
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('*')
         .eq('user_id', user!.id)
         .maybeSingle();
       setProfile(profileData);
@@ -353,18 +356,9 @@ const defaultWorkingHours: WorkingHours = {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                {todayAppointments.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-accent text-accent-foreground text-xs rounded-full flex items-center justify-center">
-                    {todayAppointments.length}
-                  </span>
-                )}
-              </Button>
-               <UserMenu
-                  full_name={profile?.full_name}
-                  onSignOut={signOut}
-                />
+              <NotificationBell todayAppointments={appointments}>
+              </NotificationBell>
+              <AvatarUpload profileData={profile} onSignOut={signOut}></AvatarUpload>
             </div>
           </div>
         </div>

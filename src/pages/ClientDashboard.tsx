@@ -5,6 +5,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { UserMenu } from '../components/common/UserMenu';
+import { Profile } from "./Profile";
+import AvatarUpload from "@/components/common/AvatarUpload";
 
 interface Appointment {
   id: string;
@@ -21,7 +23,7 @@ export default function ClientDashboard() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [profile, setProfile] = useState<Profile| null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"proximos" | "historico">("proximos");
 
@@ -45,7 +47,7 @@ export default function ClientDashboard() {
       // Fetch profile
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('full_name')
+        .select('*')
         .eq('user_id', user!.id)
         .maybeSingle();
       setProfile(profileData);
@@ -117,10 +119,7 @@ export default function ClientDashboard() {
                 <span className="hidden sm:inline">Buscar Profissionais</span>
               </Button>
             </Link>
-            <UserMenu
-              full_name={profile?.full_name}
-              onSignOut={signOut}
-            />
+            <AvatarUpload profileData={profile} onSignOut={signOut}></AvatarUpload>
           </div>
         </div>
       </header>

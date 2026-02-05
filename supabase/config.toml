@@ -1,1 +1,4 @@
-project_id = "jzvzevvdzvixbijhtpdk"
+[functions.upload-avatar]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/upload-avatar/index.ts"

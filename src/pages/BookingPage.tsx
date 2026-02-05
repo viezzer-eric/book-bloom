@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar, Clock, MapPin, ChevronLeft, ChevronRight, Check, Loader2 } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import CalendarPicker from "@/components/common/AvatarUpload";
 
 interface Service {
   id: string;
@@ -23,7 +24,12 @@ interface ProviderProfile {
   working_hours: any;
 }
 
-
+interface AppointmentSchedule {
+  appointment_date: string, 
+  start_time: string, 
+  end_time: string,
+  status: string
+}
 
 const weekDayMap: Record<string, string> = {
   dom: "Domingo",
@@ -36,15 +42,15 @@ const weekDayMap: Record<string, string> = {
 };
 
 
-
 export default function BookingPage() {
   const { providerId } = useParams<{ providerId: string }>();
   const { user } = useAuth();
-  
+  const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [selectedDate, setSelectedDate] = useState<number | null>(null);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [AppointmentSchedule, setAppointmentSchedule] = useState<AppointmentSchedule[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -59,75 +65,128 @@ export default function BookingPage() {
   const [isBooked, setIsBooked] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [provider, setProvider] = useState<ProviderProfile | null>(null);
   const [services, setServices] = useState<Service[]>([]);
 
     function generateTimeSlots(
-    open: string | null,
-    close: string | null,
-    intervalMinutes = selectedService.duration_minutes
-  ): string[] {
-    if (!open || !close) return [];
+      open: string | null,
+      close: string | null,
+      intervalMinutes = selectedService?.duration_minutes ?? 30
+    ): string[] {
+      if (!open || !close) return [];
 
-    const slots: string[] = [];
+      const slots: string[] = [];
 
-    const [openH, openM] = open.split(":").map(Number);
-    const [closeH, closeM] = close.split(":").map(Number);
+      const [openH, openM] = open.split(":").map(Number);
+      const [closeH, closeM] = close.split(":").map(Number);
 
-    let current = new Date();
-    current.setHours(openH, openM, 0, 0);
+      const current = new Date();
+      current.setHours(openH, openM, 0, 0);
 
-    const end = new Date();
-    end.setHours(closeH, closeM, 0, 0);
+      const end = new Date();
+      end.setHours(closeH, closeM, 0, 0);
 
-    while (current < end) {
-      const hours = String(current.getHours()).padStart(2, "0");
-      const minutes = String(current.getMinutes()).padStart(2, "0");
-      slots.push(`${hours}:${minutes}`);
+      if (end <= current) {
+        end.setDate(end.getDate() + 1);
+      }
 
-      current.setMinutes(current.getMinutes() + intervalMinutes);
+      while (current < end) {
+        const hours = String(current.getHours()).padStart(2, "0");
+        const minutes = String(current.getMinutes()).padStart(2, "0");
+
+        slots.push(`${hours}:${minutes}`);
+
+        current.setMinutes(current.getMinutes() + intervalMinutes);
+      }
+
+      return slots;
     }
 
-    return slots;
-  }
 
+    const appointmentsByDate = useMemo(() => {
+      const map = new Map<string, any[]>();
+      AppointmentSchedule.forEach((apt) => {
+        if (!map.has(apt.appointment_date)) {
+          map.set(apt.appointment_date, []);
+        }
+        map.get(apt.appointment_date)!.push(apt);
+      });
 
-  const generateCalendarDays = () => {
-  const today = new Date();
-  const days = [];
+      return map;
+    }, [AppointmentSchedule]);
 
-  for (let i = 0; i < 14; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() + i);
+    const calendarDays = useMemo(() => {
+    if (!provider) return [];
 
-    const shortDay = date
-      .toLocaleDateString("pt-BR", { weekday: "short" })
-      .replace(".", "")
-      .toLowerCase();
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
 
-    const weekDayName = weekDayMap[shortDay];
-    const dayConfig = provider?.working_hours[weekDayName];
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
 
-    const available =
-      i !== 0 && 
-      !!dayConfig &&
-      !dayConfig.closed &&
-      !!dayConfig.open &&
-      !!dayConfig.close;
+    const startOffset = firstDay.getDay();
+    const totalCells =
+      Math.ceil((startOffset + lastDay.getDate()) / 7) * 7;
 
-    days.push({
-      date,
-      dayName: shortDay,
-      dayNumber: date.getDate(),
-      isToday: i === 0,
-      available,
-    });
-  }
-  return days;
-};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
-  const calendarDays = generateCalendarDays();
+    const days: any[] = [];
+
+    for (let i = 0; i < totalCells; i++) {
+      const date = new Date(year, month, i - startOffset + 1);
+
+      if (i < startOffset || date > lastDay) {
+        days.push(null);
+        continue;
+      }
+
+      const isoDate = date.toLocaleDateString("sv-SE");
+
+      const shortDay = date
+        .toLocaleDateString("pt-BR", { weekday: "short" })
+        .replace(".", "")
+        .toLowerCase();
+
+      const weekDayName = weekDayMap[shortDay];
+      const dayConfig = provider?.working_hours?.[weekDayName];
+
+      const compare = new Date(date);
+      compare.setHours(0, 0, 0, 0);
+
+      const isPast = compare < today;
+      const isToday = compare.getTime() === today.getTime();
+
+      const appointments = appointmentsByDate.get(isoDate) ?? [];
+      const isFull = appointments.length >= 10;
+
+      const available =
+        !isPast &&
+        !!selectedService &&
+        !!dayConfig &&
+        !dayConfig.closed &&
+        dayConfig.open &&
+        dayConfig.close &&
+        !isFull;
+
+      days.push({
+        date,
+        isoDate,
+        dayNumber: date.getDate(),
+        dayName: shortDay,
+        isToday,
+        available,
+      });
+    }
+
+    return days;
+  }, [
+    currentMonth,
+    provider,
+    appointmentsByDate,
+    selectedService,
+  ]);
 
   useEffect(() => {
     if (providerId) {
@@ -157,7 +216,14 @@ export default function BookingPage() {
         .select('*')
         .eq('provider_id', providerId)
         .eq('active', true);
-      setServices(servicesData || []);  
+      setServices(servicesData || []); 
+      
+      const { data: appointmentData } = await supabase
+      .from('appointments')
+      .select('appointment_date, start_time, end_time, status')
+      .eq('provider_id', providerId);
+      setAppointmentSchedule(appointmentData || []); 
+      
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -178,6 +244,9 @@ export default function BookingPage() {
 
   useEffect(() => {
   const loadProfile = async () => {
+    if(!user)
+      return;
+    
     const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -196,8 +265,18 @@ export default function BookingPage() {
   loadProfile();
 }, [user]);
 
-  const selectedDay = calendarDays[selectedDate];
 
+function changeMonth(increment: number) {
+  setSelectedDate(null);
+  setSelectedTime(null);
+  setCurrentMonth(prev =>
+    new Date(prev.getFullYear(), prev.getMonth() + increment, 1)
+  );
+}
+
+const selectedDay = calendarDays.find(
+  d => d?.isoDate === selectedDate
+);
   const dayConfig = provider?.working_hours[weekDayMap[selectedDay?.dayName]];
 
   const timeSlots = dayConfig && !dayConfig.closed
@@ -209,9 +288,20 @@ export default function BookingPage() {
     
     setIsSubmitting(true);
     try {
-      const selectedServiceData = services.find(s => s.id === selectedService?.id);
-      const appointmentDate = calendarDays[selectedDate].date.toISOString().split('T')[0];
-      const endTime = calculateEndTime(selectedTime, selectedServiceData?.duration_minutes || 60);
+      const selectedDay = calendarDays.find(
+        d => d?.isoDate === selectedDate
+      );      
+
+        if (!selectedDay) {
+        toast.error("Data inválida.");
+        setIsSubmitting(false);
+        return;
+      }
+      const appointmentDate = selectedDay.date
+        .toISOString()
+        .split('T')[0];      
+  
+      const endTime = calculateEndTime(selectedTime, selectedService?.duration_minutes || 60);
 
       const { error } = await supabase
         .from('appointments')
@@ -228,7 +318,8 @@ export default function BookingPage() {
           notes: formData.notes,
           status: 'pending',
         });
-
+      
+        console.log(error)
       if (error) throw error;
 
       setIsBooked(true);
@@ -301,6 +392,51 @@ export default function BookingPage() {
       </div>
     );
   }
+  
+  const isSlotBlocked = (
+    dateISO: string,
+    slotStart: string,
+    duration: number
+  ) => {
+    const dayAppointments = appointmentsByDate.get(dateISO);
+    if (!dayAppointments) return false;
+
+    const slotStartDate = new Date(`${dateISO}T${slotStart}`);
+
+    const slotEndDate = new Date(
+      slotStartDate.getTime() + duration * 60000
+    );
+
+    return dayAppointments
+    .filter((apt) => apt.status !== "cancelled")
+    .some((apt) => {
+      const aptStart = new Date(`${apt.appointment_date}T${apt.start_time}`);
+      const aptEnd = new Date(`${apt.appointment_date}T${apt.end_time}`);
+
+      return slotStartDate < aptEnd && slotEndDate > aptStart;
+    });
+  };
+
+
+  const monthLabel = currentMonth.toLocaleDateString("pt-BR", {
+  month: "long",
+  year: "numeric",
+  });
+
+  const isPastTimeSlot = (day: any, time: string) => {
+  if (!day) return true; // se não há dia, bloqueia
+
+  const now = new Date();
+
+  const slot = new Date(day.date);
+  const [hours, minutes] = time.split(":");
+
+  slot.setHours(Number(hours), Number(minutes), 0, 0);
+
+  return slot <= now;
+  };
+
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -308,7 +444,12 @@ export default function BookingPage() {
       <header className="bg-card border-b border-border">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-xl gradient-hero flex items-center justify-center">
+              {step === 1 ? (
+                <ChevronLeft
+                className="w-8 h-8 cursor-pointer hover:opacity-70 transition"
+                onClick={() => navigate(-1)}
+                />
+              ) : null}            <div className="w-16 h-16 rounded-xl gradient-hero flex items-center justify-center">
               <Calendar className="w-8 h-8 text-primary-foreground" />
             </div>
             <div>
@@ -423,48 +564,104 @@ export default function BookingPage() {
               </div>
             </div>
 
-            {/* Date Picker */}
-            <div className="space-y-3">
-              <h3 className="font-semibold text-foreground">Datas Disponíveis</h3>
-              <div className="flex gap-2 overflow-x-auto pb-2">
-                {calendarDays.map((day, i) => (
-                  <button
-                    key={i}
-                    onClick={() => day.available && setSelectedDate(i)}
-                    disabled={!day.available}
-                    className={`flex-shrink-0 w-16 py-3 rounded-xl text-center transition-all ${
-                      !day.available 
-                        ? "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
-                        : selectedDate === i
-                          ? "bg-primary text-primary-foreground shadow-soft"
-                          : "bg-card border border-border hover:border-primary/30"
-                    }`}
-                  >
-                    <div className="text-xs opacity-70 capitalize">{day.dayName}</div>
-                    <div className="text-lg font-semibold">{day.dayNumber}</div>
-                  </button>
-                ))}
+           {/* Calendar Picker Wrapper */}
+          <div className="space-y-4">
+            {/* Header com Navegação e Título */}
+            <div className="flex items-center justify-between px-1">
+              <h3 className="font-semibold text-foreground italic">{monthLabel}</h3>
+              <div className="flex gap-2">
+                <button onClick={() => changeMonth(-1)} className="p-2 hover:bg-muted rounded-lg">
+                  <ChevronLeft />
+                </button>
+                <button onClick={() => changeMonth(1)} className="p-2 hover:bg-muted rounded-lg">
+                  <ChevronRight />
+                </button>
               </div>
             </div>
+
+            {/* Grid do Calendário */}
+            <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+              {/* Cabeçalho dos Dias da Semana */}
+              <div className="grid grid-cols-7 mb-3 border-b border-border/50 pb-2">
+                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((d) => (
+                  <div key={d} className="text-center text-[10px] font-bold uppercase tracking-tighter text-muted-foreground/60">
+                    {d}
+                  </div>
+                ))}
+              </div>
+
+              {/* Grid de Dias - Usando suas props originais */}
+              <div className="grid grid-cols-7 gap-2">
+                {calendarDays.map((day, i) => {
+                  // células vazias do grid
+                  if (!day) {
+                    return <div key={`empty-${i}`} className="aspect-square" />;
+                  }
+                  const isSelected = selectedDate === day.isoDate;
+                  return (
+                    <button
+                      key={day.isoDate}
+                      onClick={() => day.available && setSelectedDate(day.isoDate)}
+                      disabled={!day.available}
+                      className={`
+                        aspect-square flex flex-col items-center justify-center 
+                        rounded-xl text-center transition-all
+                        ${
+                          !day.available
+                            ? "bg-muted text-muted-foreground opacity-30 cursor-not-allowed"
+                            : isSelected
+                              ? "bg-primary text-primary-foreground shadow-soft scale-105 z-10"
+                              : "bg-card border border-border hover:border-primary/30"
+                        }
+                      `}
+                    >
+                      <span className="text-[10px] opacity-70 capitalize leading-none mb-1">
+                        {day.dayName.substring(0, 3)}
+                      </span>
+
+                      <span className="text-base font-semibold leading-none">
+                        {day.dayNumber}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
 
             {/* Time Slots */}
             {selectedDate !== null && (
               <div className="space-y-3 animate-fade-in">
                 <h3 className="font-semibold text-foreground">Horários Disponíveis</h3>
                 <div className="grid grid-cols-4 gap-2">
-                  {timeSlots.map((time) => (
+                  {timeSlots.map((time) => {
+                  const blocked =
+                  !selectedService ||
+                  !selectedDay ||
+                  isPastTimeSlot(selectedDay, time) ||
+                  isSlotBlocked(
+                    selectedDay.isoDate,
+                    time,
+                    selectedService.duration_minutes
+                  );
+
+                  return (
                     <button
                       key={time}
-                      onClick={() => setSelectedTime(time)}
+                      disabled={blocked}
+                      onClick={() => !blocked && setSelectedTime(time)}
                       className={`py-3 rounded-lg text-sm font-medium transition-all ${
-                        selectedTime === time
-                          ? "bg-primary text-primary-foreground shadow-soft"
-                          : "bg-card border border-border hover:border-primary/30 text-foreground"
+                        blocked
+                          ? "bg-muted text-muted-foreground cursor-not-allowed opacity-50"
+                          : selectedTime === time
+                            ? "bg-primary text-primary-foreground shadow-soft"
+                            : "bg-card border border-border hover:border-primary/30 text-foreground"
                       }`}
                     >
                       {time}
                     </button>
-                  ))}
+                  );
+                })}
                 </div>
               </div>
             )}
