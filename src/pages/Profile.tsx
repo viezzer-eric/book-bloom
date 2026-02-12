@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import AvatarUpload from "@/components/common/AvatarUpload";
+import AvatarUserMenu from "@/components/common/AvatarUpload";
 
 export interface Profile {
   avatar_url: string;
@@ -174,7 +175,7 @@ export default function Profile() {
             <div className="p-6 rounded-xl bg-card border border-border space-y-4">
               <div className="flex items-center gap-4 mb-4">
                 <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                  <AvatarUpload profileData={profilerData} onSignOut={signOut}></AvatarUpload>
+                  <AvatarUserMenu profileData={profilerData} target={"profile"} onSignOut={signOut}></AvatarUserMenu>
                 </div>
                 <div>
                   <h3 className="font-semibold text-foreground">Dados Pessoais</h3>

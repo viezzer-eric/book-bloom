@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ProviderCard } from "./ProviderCard";
 import { SearchX, Users } from "lucide-react";
 
@@ -14,7 +15,9 @@ interface Provider {
   business_name: string;
   description: string | null;
   address: string | null;
+  addressNumber: string | null;
   services: Service[];
+  avatar_url: string | null;
 }
 
 interface ProviderListProps {
@@ -24,6 +27,7 @@ interface ProviderListProps {
 }
 
 export function ProviderList({ providers, isLoading, hasFilters }: ProviderListProps) {
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -81,8 +85,9 @@ export function ProviderList({ providers, isLoading, hasFilters }: ProviderListP
           id={provider.id}
           businessName={provider.business_name}
           description={provider.description}
-          address={provider.address}
+          address={provider.address + ", "+ provider.addressNumber}
           services={provider.services}
+          avatar_url={provider.avatar_url}
         />
       ))}
     </div>

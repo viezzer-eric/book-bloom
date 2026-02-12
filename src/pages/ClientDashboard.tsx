@@ -4,9 +4,8 @@ import { Calendar, Clock, Search } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { UserMenu } from '../components/common/UserMenu';
 import { Profile } from "./Profile";
-import AvatarUpload from "@/components/common/AvatarUpload";
+import AvatarUserMenu from "@/components/common/AvatarUpload";
 
 interface Appointment {
   id: string;
@@ -98,8 +97,8 @@ export default function ClientDashboard() {
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const upcomingAppointments = appointments.filter(apt => apt.appointment_date >= today);
-  const pastAppointments = appointments.filter(apt => apt.appointment_date < today);
+  const upcomingAppointments = appointments.filter(apt => apt.status === "pending");
+  const pastAppointments = appointments.filter(apt => apt.status === "completed" || apt.status === "cancelled");
 
   return (
     <div className="min-h-screen bg-background">
@@ -119,7 +118,7 @@ export default function ClientDashboard() {
                 <span className="hidden sm:inline">Buscar Profissionais</span>
               </Button>
             </Link>
-            <AvatarUpload profileData={profile} onSignOut={signOut}></AvatarUpload>
+            <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
           </div>
         </div>
       </header>

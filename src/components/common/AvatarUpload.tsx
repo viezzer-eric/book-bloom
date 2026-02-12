@@ -23,27 +23,42 @@ interface AvatarUserMenuProps {
 
 export default function AvatarUserMenu({
   profileData,
-  target = "profile",
+  target = "provider",
   onSignOut,
 }: AvatarUserMenuProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Se avatar_url estiver preenchido, busca no Storage
+  const isProfile = target === "profile";
+
+  // tamanhos separados
+  const profileSizeClass = "w-[79px] h-[79px]";
+  const nonProfileSizeClass = "w-[40px] h-[40px]"; // aumentei um pouco mais para ficar realmente visível
+
+  const sizeClass = isProfile
+    ? profileSizeClass
+    : nonProfileSizeClass;
+
+  const iconSize = isProfile
+    ? "w-8 h-8"
+    : "w-5 h-5";
+
+  const shouldShowEdit =
+    isProfile || !profileData?.avatar_url;
+
   useEffect(() => {
-    async function fetchAvatar() {
-      if (profileData.avatar_url) {
-        const { data,  } = supabase.storage
-          .from("avatar_urls")
-          .getPublicUrl(profileData.avatar_url);
-        setPreview(data.publicUrl);
-      }
-    }
+    if (!profileData?.avatar_url) return;
 
-    fetchAvatar();
-  }, [profileData.avatar_url]);
+    const { data } = supabase.storage
+      .from("avatar_urls")
+      .getPublicUrl(profileData?.avatar_url);
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    setPreview(`${data.publicUrl}?t=${Date.now()}`);
+  }, [profileData?.avatar_url]);
+
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const file = event.target.files?.[0];
 
     if (!file || !profileData.email) {
@@ -51,12 +66,12 @@ export default function AvatarUserMenu({
       return;
     }
 
-    // Preview local
+    // preview instantâneo
     const reader = new FileReader();
-    reader.onloadend = () => setPreview(reader.result as string);
+    reader.onloadend = () =>
+      setPreview(reader.result as string);
     reader.readAsDataURL(file);
 
-    // Prepara FormData
     const formData = new FormData();
     formData.append("avatar", file);
     formData.append("target", target);
@@ -65,22 +80,30 @@ export default function AvatarUserMenu({
     try {
       setLoading(true);
 
+      const { data: sessionData } =
+        await supabase.auth.getSession();
+
+      const token = sessionData.session?.access_token;
+
       const response = await fetch(
         "https://kivkhiwtdcvpdixjymwu.supabase.co/functions/v1/upload-avatar",
         {
           method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
           body: formData,
         }
       );
 
       if (!response.ok) {
         const text = await response.text();
-        throw new Error("Falha ao enviar avatar: " + text);
+        throw new Error(text);
       }
 
       const data = await response.json();
-      console.log("Avatar enviado com sucesso:", data);
-      setPreview(data.public_url); // atualiza preview
+
+      setPreview(`${data.public_url}?t=${Date.now()}`);
     } catch (error) {
       console.error(error);
       alert("Erro ao enviar avatar");
@@ -89,39 +112,51 @@ export default function AvatarUserMenu({
     }
   };
 
-  const getInitials = (name: string) => {
-    return name
+  const getInitials = (name: string) =>
+    name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .toUpperCase()
       .slice(0, 2);
-  };
+
+  const AvatarContent = preview ? (
+    <img
+      src={preview}
+      alt="Avatar"
+      className="w-full h-full object-cover rounded-full"
+    />
+  ) : profileData?.full_name ? (
+    <span className="font-semibold">
+      {getInitials(profileData?.full_name)}
+    </span>
+  ) : (
+    <User className={iconSize} />
+  );
 
   return (
     <div className="flex items-center gap-3">
-      <div className="relative w-9 h-9">
-        <Link
-          to="/perfil"
-          className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-medium overflow-hidden"
-        >
-          {preview ? (
-            <img
-              src={preview}
-              alt="Avatar"
-              className="w-full h-full object-cover"
-            />
-          ) : profileData.full_name ? (
-            getInitials(profileData.full_name)
-          ) : (
-            <User className="w-4 h-4" />
-          )}
-        </Link>
+      {/* container RELATIVO correto */}
+      <div className={`relative group ${sizeClass}`}>
+        {isProfile ? (
+          <div
+            className={`${sizeClass} rounded-full bg-primary/10 flex items-center justify-center overflow-hidden`}
+          >
+            {AvatarContent}
+          </div>
+        ) : (
+          <Link
+            to="/perfil"
+            className={`${sizeClass} rounded-full bg-primary/10 flex items-center justify-center overflow-hidden`}
+          >
+            {AvatarContent}
+          </Link>
+        )}
 
-        {/* Botão de lápis só se não houver avatar */}
-        {!profileData.avatar_url && (
-          <label className="absolute bottom-0 left-0 bg-white rounded-full p-1 shadow-md cursor-pointer border border-gray-300">
-            <Edit className="w-4 h-4 text-gray-700" />
+        {/* lápis */}
+        {shouldShowEdit && (
+          <label className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition rounded-full cursor-pointer">
+            <Edit className="w-5 h-5 text-white" />
             <input
               type="file"
               accept="image/*"
@@ -131,17 +166,26 @@ export default function AvatarUserMenu({
           </label>
         )}
 
+        {/* loading */}
         {loading && (
-          <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-full">
-            <span className="text-white text-xs">Carregando...</span>
+          <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
+            <span className="text-white text-xs">
+              Enviando...
+            </span>
           </div>
         )}
       </div>
 
-      {/* Botão de logout */}
-      <Button variant="ghost" size="icon" onClick={onSignOut}>
-        <LogOut className="w-4 h-4" />
-      </Button>
+      {/* logout fora do profile */}
+      {!isProfile && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onSignOut}
+        >
+          <LogOut className="w-4 h-4" />
+        </Button>
+      )}
     </div>
   );
 }

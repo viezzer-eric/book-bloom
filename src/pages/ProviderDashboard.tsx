@@ -13,7 +13,8 @@ import {
   LogOut,
   User,
   LayoutDashboard,
-  History
+  History,
+  Edit
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,7 @@ import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistor
 import NotificationBell from "@/components/common/NotificationBell";
 import AvatarUpload from "@/components/common/AvatarUpload";
 import { Profile } from "./Profile";
+import AvatarUserMenu from "@/components/common/AvatarUpload";
 
 interface Appointment {
   id: string;
@@ -69,6 +71,7 @@ interface ProviderProfile {
   city: string;
   neighborhood: string;
   addressNumber: string;
+  avatar_url
 }
 
 interface ClientAppointment {
@@ -103,8 +106,10 @@ export default function ProviderDashboard() {
   const [rua, setRua] = useState<string>("");
   const [cidade, setCidade] = useState<string>("");
   const [uf, setUf] = useState<string>("");
-
-const defaultWorkingHours: WorkingHours = {
+  const [businessPhoto, setBusinessPhoto] = useState<string | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  
+  const defaultWorkingHours: WorkingHours = {
     Segunda: { open: "09:00", close: "18:00", closed: false },
     Terça: { open: "09:00", close: "18:00", closed: false },
     Quarta: { open: "09:00", close: "18:00", closed: false },
@@ -172,6 +177,17 @@ const defaultWorkingHours: WorkingHours = {
       navigate("/buscar");
     }
   }, [user, userRole, authLoading, navigate]);
+
+  useEffect(() => {
+  if (!providerProfile?.avatar_url) return;
+
+  const { data } = supabase.storage
+    .from("avatar_urls")
+    .getPublicUrl(providerProfile.avatar_url);
+
+  // evita cache antigo
+  setBusinessPhoto(`${data.publicUrl}?t=${Date.now()}`);
+}, [providerProfile?.avatar_url]);
 
   useEffect(() => {
     if (user) {
@@ -341,6 +357,54 @@ const defaultWorkingHours: WorkingHours = {
     apt => apt.appointment_date === new Date().toISOString().split('T')[0]
   );
 
+  const handleBusinessPhoto = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // preview imediato
+    const reader = new FileReader();
+    reader.onloadend = () => setBusinessPhoto(reader.result as string);
+    reader.readAsDataURL(file);
+
+    try {
+
+      setUploadingPhoto(true);
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      const formData = new FormData();
+      formData.append("avatar", file);
+      formData.append("target", "provider"); // 👈 importante
+      formData.append("email", user.email);
+      formData.append("business_name", providerProfile.business_name);
+
+      const res = await fetch(
+        "https://kivkhiwtdcvpdixjymwu.supabase.co/functions/v1/upload-avatar",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const data = await res.json();
+
+      // evita cache
+      setBusinessPhoto(`${data.public_url}?t=${Date.now()}`);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao enviar foto do negócio");
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -358,7 +422,7 @@ const defaultWorkingHours: WorkingHours = {
             <div className="flex items-center gap-3">
               <NotificationBell todayAppointments={appointments}>
               </NotificationBell>
-              <AvatarUpload profileData={profile} onSignOut={signOut}></AvatarUpload>
+              <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
             </div>
           </div>
         </div>
@@ -444,11 +508,47 @@ const defaultWorkingHours: WorkingHours = {
                   <h1 className="text-2xl font-display font-bold text-foreground">Configurações</h1>
                   <p className="text-muted-foreground">Gerencie seu perfil de negócio</p>
                 </div>
-
                 <div className="space-y-6 max-w-xl">
                   <div className="p-6 rounded-xl bg-card border border-border">
                     <h3 className="font-semibold text-card-foreground mb-4">Informações do Negócio</h3>
                     <div className="space-y-4">
+                      <div>
+                        <label className="relative w-28 h-28 rounded-full bg-muted flex items-center justify-center overflow-hidden cursor-pointer group">
+                          {/* INPUT escondido */}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleBusinessPhoto}
+                          />
+
+                          {/* FOTO */}
+                          {businessPhoto ? (
+                            <img
+                              src={businessPhoto}
+                              alt="Foto do negócio"
+                              className="w-full h-full object-cover rounded-full"
+                            />
+                          ) : (
+                            <User className="w-10 h-10 text-muted-foreground" />
+                          )}
+
+                          {/* OVERLAY COM LÁPIS */}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded-full">
+                            <Edit className="w-5 h-5 text-white" />
+                          </div>
+
+                          {/* LOADING */}
+                          {uploadingPhoto && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
+                              <span className="text-white text-xs">Enviando...</span>
+                            </div>
+                          )}
+                        </label>
+                        <span className="text-xs text-muted-foreground">
+                          Foto do negócio
+                        </span>
+                      </div>
                       <div>
                         <label className="block text-sm font-medium text-muted-foreground mb-1">Nome do Negócio<span className="text-red-500">*</span></label>
                         <input 

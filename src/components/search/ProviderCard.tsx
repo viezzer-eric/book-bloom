@@ -2,6 +2,8 @@ import { MapPin, Clock, Briefcase, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Service {
   id: string;
@@ -16,6 +18,7 @@ interface ProviderCardProps {
   description: string | null;
   address: string | null;
   services: Service[];
+  avatar_url: string | null;
 }
 
 export function ProviderCard({
@@ -24,17 +27,37 @@ export function ProviderCard({
   description,
   address,
   services,
+  avatar_url
 }: ProviderCardProps) {
+
   const minPrice = services.length > 0 
     ? Math.min(...services.map(s => s.price)) 
     : null;
+
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+      if (!avatar_url) return;
+      const { data } = supabase.storage
+        .from("avatar_urls")
+        .getPublicUrl(avatar_url);
+      setPreview(`${data.publicUrl}?t=${Date.now()}`);
+    }, [avatar_url]);
 
   return (
     <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-medium transition-all duration-300 group">
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
         {/* Avatar/Inicial */}
-        <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center text-primary-foreground text-xl font-display font-semibold shrink-0">
-          {businessName.charAt(0).toUpperCase()}
+        <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center text-primary-foreground text-xl font-display font-semibold shrink-0 overflow-hidden">
+          {preview ? (
+            <img
+              src={preview}
+              alt="Avatar do negócio"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            businessName?.charAt(0).toUpperCase()
+          )}
         </div>
 
         {/* Informações */}
@@ -50,11 +73,16 @@ export function ProviderCard({
           )}
 
           {/* Localização */}
-          {address && (
-            <div className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground">
-              <MapPin className="w-4 h-4" />
-              <span>{address}</span>
-            </div>
+         {address && (
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground hover:text-primary transition cursor-pointer"
+            >
+            <MapPin className="w-4 h-4" />
+            <span className="underline">{address}</span>
+            </a>
           )}
 
           {/* Serviços */}

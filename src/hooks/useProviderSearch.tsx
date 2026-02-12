@@ -7,8 +7,9 @@ interface Provider {
   description: string | null;
   city: string | null;
   address: string | null;
+  addressNumber: string | null;
   user_id: string;
-  avatar_url?: string | null;
+  avatar_url: string | null;
 }
 
 interface Service {

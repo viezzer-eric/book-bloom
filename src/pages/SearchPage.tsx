@@ -7,7 +7,8 @@ import { useProviderSearch } from "@/hooks/useProviderSearch";
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { UserMenu } from "@/components/common/UserMenu";
+import AvatarUserMenu from "@/components/common/AvatarUpload";
+import { Profile } from "./Profile";
 
 export default function SearchPage() {
   const { user, signOut } = useAuth();
@@ -21,7 +22,7 @@ export default function SearchPage() {
     serviceTypes,
   } = useProviderSearch();
 
-  const [profile, setProfile] = useState<{ full_name: string } | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const hasFilters = searchTerm !== "" || selectedServiceType !== "";
 
   const fetchData = async () => {
@@ -29,7 +30,7 @@ export default function SearchPage() {
         // Fetch profile
         const { data: profileData } = await supabase
           .from('profiles')
-          .select('full_name')
+          .select('*')
           .eq('user_id', user!.id)
           .maybeSingle();
         setProfile(profileData);
@@ -64,10 +65,7 @@ export default function SearchPage() {
                 <span className="hidden sm:inline">Meus Agendamentos</span>
               </Button>
             </Link>
-            <UserMenu
-              full_name={profile?.full_name}
-              onSignOut={signOut}
-            />
+            <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
           </div>
           <div className="flex items-center gap-3">
               
