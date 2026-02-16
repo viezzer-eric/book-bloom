@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Eye, EyeOff, Loader2, MessageCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const WHATSAPP_NUMBER = "5511961380749"; 
@@ -71,6 +72,23 @@ export default function Auth() {
       toast.error("Ocorreu um erro. Tente novamente.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!formData.email) {
+      toast.error("Digite seu e-mail para recuperar a senha");
+      return;
+    }
+    setIsLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setIsLoading(false);
+    if (error) {
+      toast.error(error.message || "Erro ao enviar e-mail de recuperação");
+    } else {
+      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
     }
   };
 
@@ -214,6 +232,16 @@ export default function Auth() {
         {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Entrar
       </Button>
+
+      <div className="text-right">
+        <button
+          type="button"
+          onClick={handleForgotPassword}
+          className="text-sm text-primary font-medium hover:underline"
+        >
+          Esqueci minha senha
+        </button>
+      </div>
     </form>
   );
 
