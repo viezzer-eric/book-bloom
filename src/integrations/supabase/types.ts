@@ -127,7 +127,6 @@ export type Database = {
           state: string | null
           updated_at: string
           user_id: string
-          avatar_url: string | null
           working_hours: Json | null
         }
         Insert: {

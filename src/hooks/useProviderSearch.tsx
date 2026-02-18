@@ -8,8 +8,11 @@ interface Provider {
   city: string | null;
   address: string | null;
   addressNumber: string | null;
+  cep: string | null;
+  state: string | null;
+  neighborhood: string | null;
   user_id: string;
-  avatar_url: string | null;
+  avatar_url?: string | null;
 }
 
 interface Service {

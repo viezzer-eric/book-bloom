@@ -5,7 +5,6 @@ import { Label } from "@/components/ui/label";
 import { Calendar, Eye, EyeOff, Loader2, MessageCircle } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 const WHATSAPP_NUMBER = "5511961380749"; 
@@ -75,22 +74,7 @@ export default function Auth() {
     }
   };
 
-  const handleForgotPassword = async () => {
-    if (!formData.email) {
-      toast.error("Digite seu e-mail para recuperar a senha");
-      return;
-    }
-    setIsLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
-    setIsLoading(false);
-    if (error) {
-      toast.error(error.message || "Erro ao enviar e-mail de recuperação");
-    } else {
-      toast.success("E-mail de recuperação enviado! Verifique sua caixa de entrada.");
-    }
-  };
+  // Forgot password is handled by the dedicated /esqueci-senha page
 
   const handleWhatsAppContact = () => {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`, "_blank");
@@ -234,13 +218,12 @@ export default function Auth() {
       </Button>
 
       <div className="text-right">
-        <button
-          type="button"
-          onClick={handleForgotPassword}
+        <Link
+          to="/esqueci-senha"
           className="text-sm text-primary font-medium hover:underline"
         >
           Esqueci minha senha
-        </button>
+        </Link>
       </div>
     </form>
   );
