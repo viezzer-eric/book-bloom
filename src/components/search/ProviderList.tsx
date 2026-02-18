@@ -17,7 +17,7 @@ interface Provider {
   address: string | null;
   addressNumber: string | null;
   services: Service[];
-  avatar_url: string | null;
+  avatar_url?: string | null;
 }
 
 interface ProviderListProps {
