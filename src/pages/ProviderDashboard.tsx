@@ -420,8 +420,10 @@ export default function ProviderDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <NotificationBell todayAppointments={appointments}>
-              </NotificationBell>
+              <NotificationBell
+                todayAppointments={appointments}
+                providerId={providerProfile?.id}
+              />
               <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
             </div>
           </div>
