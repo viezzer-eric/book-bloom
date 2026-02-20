@@ -7,7 +7,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import AvatarUpload from "@/components/common/AvatarUpload";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 
 export interface Profile {

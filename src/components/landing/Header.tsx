@@ -33,6 +33,9 @@ export function Header() {
             <a href="#como-funciona" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
               Como Funciona
             </a>
+            <a href="#valores" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                Valores
+              </a>
           </nav>
           
           {/* Desktop CTA */}
@@ -80,6 +83,9 @@ export function Header() {
               </a>
               <a href="#como-funciona" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
                 Como Funciona
+              </a>
+              <a href="#valores" className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                Valores
               </a>
               <div className="flex gap-2 mt-2 px-4">
                 {user ? (

@@ -1,5 +1,5 @@
 import { Bell } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -8,6 +8,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 
 type Appointment = {
   id: string;
@@ -21,41 +22,117 @@ type Appointment = {
 };
 
 interface Props {
-  todayAppointments: Appointment[];
+  todayAppointments?: Appointment[];
+  providerId?: string;
 }
 
 type AppointmentWithMeta = Appointment & {
   isPast: boolean;
 };
 
-export default function NotificationBell({ todayAppointments }: Props) {
+export default function NotificationBell({
+  todayAppointments = [],
+  providerId,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [hasSeen, setHasSeen] = useState(false);
+  const [appointments, setAppointments] =
+    useState<Appointment[]>(todayAppointments);
+  const [isConnected, setIsConnected] = useState(false);
+  const [hasNewInsert, setHasNewInsert] = useState(false);
 
-  /**
-   * Converte HH:mm → Date hoje
-   */
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // 🔊 Carrega som apenas uma vez
+  useEffect(() => {
+    audioRef.current = new Audio("/notification.mp3");
+  }, []);
+
+  const playSound = () => {
+    audioRef.current?.play().catch(() => {});
+  };
+
+  const fetchTodayAppointments = async () => {
+    if (!providerId) return;
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const { data, error } = await supabase
+      .from('appointments')
+      .select('*, service:services(name, duration_minutes)')
+      .eq("provider_id", providerId)
+      .eq("appointment_date", today)
+      .order("start_time", { ascending: true });
+
+    if (!error && data) {
+      setAppointments(data as Appointment[]);
+    }
+  };
+
+  // 🔥 Realtime
+  useEffect(() => {
+    if (!providerId) return;
+
+    fetchTodayAppointments();
+
+    const channel = supabase
+      .channel(`appointments-bell-${providerId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `provider_id=eq.${providerId}`,
+        },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            playSound();
+            setHasSeen(false);
+            setHasNewInsert(true);
+
+            setTimeout(() => {
+              setHasNewInsert(false);
+            }, 2000);
+          }
+
+          fetchTodayAppointments();
+        }
+      )
+      .subscribe((status) => {
+        setIsConnected(status === "SUBSCRIBED");
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [providerId]);
+
+  useEffect(() => {
+    if (!providerId) {
+      setAppointments(todayAppointments);
+    }
+  }, [todayAppointments, providerId]);
+
   const buildDateFromTime = (time: string) => {
-    const [h, m] = time.split(":").map(Number);
+    const [h = "0", m = "0"] = time.split(":");
     const d = new Date();
-    d.setHours(h, m, 0, 0);
+    d.setHours(Number(h), Number(m), 0);
     return d;
   };
 
-  /**
-   * Ordena + marca passado
-   */
   const orderedAppointments = useMemo<AppointmentWithMeta[]>(() => {
     const now = new Date();
 
-    return todayAppointments
+    return appointments
       .map((apt) => {
-        if (!apt.start_time) {
-          return { ...apt, isPast: false };
-        }
-
         const aptDate = buildDateFromTime(apt.start_time);
-
         return {
           ...apt,
           isPast: aptDate < now,
@@ -64,24 +141,17 @@ export default function NotificationBell({ todayAppointments }: Props) {
       .sort((a, b) => {
         const dateA = buildDateFromTime(a.start_time);
         const dateB = buildDateFromTime(b.start_time);
-
-        return dateB.getTime() - dateA.getTime(); // MAIS RECENTE PRIMEIRO
+        return dateB.getTime() - dateA.getTime();
       });
-  }, [todayAppointments]);
+  }, [appointments]);
 
-  /**
-   * Badge — só futuros e só se não abriu ainda
-   */
   const upcomingCount = hasSeen
     ? 0
     : orderedAppointments.filter((a) => !a.isPast).length;
 
-  /**
-   * Cores por status
-   */
-  const getColor = (status?: string, isPast?: boolean) => {
+  const getStatusStyle = (status?: string, isPast?: boolean) => {
     if (isPast) {
-      return "bg-muted text-muted-foreground border-muted opacity-70";
+      return "bg-muted text-muted-foreground border-muted/50 opacity-70";
     }
 
     switch (status) {
@@ -105,56 +175,122 @@ export default function NotificationBell({ todayAppointments }: Props) {
       }}
     >
       <DialogTrigger asChild>
-        <button className="relative p-2 rounded-full hover:bg-muted transition">
-          <Bell className="w-5 h-5" />
+        <button
+          className={`
+            relative p-2 rounded-full transition-all duration-300
+            hover:bg-muted
+            ${hasNewInsert ? "animate-bounce" : ""}
+          `}
+          title="Notificações"
+        >
+          <Bell
+            className={`
+              w-5 h-5 transition-transform duration-300
+              ${hasNewInsert ? "rotate-12 scale-110" : ""}
+            `}
+          />
+
+          {isConnected && providerId && (
+            <span className="absolute bottom-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-background shadow-sm" />
+          )}
 
           {upcomingCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+            <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5
+              bg-primary text-primary-foreground text-xs
+              rounded-full flex items-center justify-center
+              font-semibold shadow-md animate-pulse">
               {upcomingCount}
             </span>
           )}
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[400px] rounded-2xl">
-        <DialogHeader>
-          <DialogTitle>Notificações</DialogTitle>
+      <DialogContent
+        className="
+          sm:max-w-[440px]
+          rounded-2xl
+          border
+          bg-background/95
+          backdrop-blur-xl
+          shadow-2xl
+        "
+      >
+        <DialogHeader className="pt-4 pb-3 border-b">
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-lg font-semibold tracking-tight">
+              Notificações
+            </DialogTitle>
+
+            {isConnected && (
+              <span className="flex items-center gap-2 text-xs font-medium text-green-600">
+                <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                Tempo real ativo
+              </span>
+            )}
+          </div>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[400px] pr-3">
+        <ScrollArea className="max-h-[420px] pr-3 mt-3">
           {orderedAppointments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Nenhum agendamento hoje 🎉
-            </p>
+            <div className="flex flex-col items-center justify-center py-10 text-center">
+              <div className="text-4xl mb-3 opacity-60">📅</div>
+              <p className="text-sm font-medium">
+                Nenhum agendamento hoje
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Novos agendamentos aparecerão aqui automaticamente.
+              </p>
+            </div>
           ) : (
-            <div className="flex flex-col gap-2 py-2">
-              {orderedAppointments.map((apt) => (
+            <div className="flex flex-col gap-3 py-2">
+              {orderedAppointments.map((apt, index) => (
                 <div
                   key={apt.id}
                   className={`
-                    p-3
-                    rounded-xl
-                    border
+                    group p-4 rounded-xl border
                     shadow-sm
-                    transition
-                    ${getColor(apt.status, apt.isPast)}
+                    transition-all duration-300
+                    hover:shadow-lg hover:-translate-y-0.5
+                    animate-in fade-in slide-in-from-bottom-2
+                    ${getStatusStyle(apt.status, apt.isPast)}
                   `}
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-center justify-between">
-                    <p className="font-medium">
-                      {apt.client_name || "Desconhecido"}
+                    <p className="font-medium text-sm tracking-tight">
+                      {apt.client_name || "Cliente"}
                     </p>
 
-                    <span className="text-sm font-semibold">
+                    <span className="text-sm font-semibold tabular-nums">
                       {apt.start_time}
                     </span>
                   </div>
 
                   {apt.service && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {apt.service.name} • {apt.service.duration_minutes} min
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {apt.service.name} •{" "}
+                      {apt.service.duration_minutes} min
                     </p>
                   )}
+
+                  <div className="mt-2 flex justify-end">
+                    <span
+                      className={`
+                        text-[10px] px-2 py-0.5 rounded-full font-medium capitalize
+                        ${
+                          apt.status === "confirmed"
+                            ? "bg-green-100 text-green-700"
+                            : apt.status === "pending"
+                            ? "bg-yellow-100 text-yellow-700"
+                            : apt.status === "cancelled"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-muted text-muted-foreground"
+                        }
+                      `}
+                    >
+                      {apt.status}
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

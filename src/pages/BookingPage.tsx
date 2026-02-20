@@ -242,24 +242,33 @@ export default function BookingPage() {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 }
 
-  useEffect(() => {
+useEffect(() => {
   const loadProfile = async () => {
-    if(!user)
-      return;
-    
-    const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('email', user!.email)
-        .maybeSingle();
+    if (!user) return;
 
-      if (profileData) {
-        setinitialFormData({
-          name: profileData.full_name || "",
-          email: profileData.email || "",
-          phone: profileData.phone || "",
-        });
-      }
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("email", user.email)
+      .maybeSingle();
+
+    if (profileData) {
+      const profile = {
+        name: profileData.full_name || "",
+        email: profileData.email || "",
+        phone: profileData.phone || "",
+      };
+
+      setinitialFormData(profile);
+
+      // 🔥 SINCRONIZA COM formData
+      setFormData((prev) => ({
+        ...prev,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+      }));
+    }
   };
 
   loadProfile();
@@ -712,7 +721,7 @@ const selectedDay = calendarDays.find(
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Nome Completo *</label>
                 <input 
                   type="text" 
-                  value={formData.name || initialFormData.name}
+                  value={formData.name}
                   disabled={!!initialFormData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   placeholder="Seu nome completo"
@@ -723,7 +732,7 @@ const selectedDay = calendarDays.find(
                 <label className="block text-sm font-medium text-muted-foreground mb-1">E-mail *</label>
                 <input 
                   type="email" 
-                  value={initialFormData.email || formData.email}
+                  value={formData.email}
                   disabled={!!initialFormData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="seu@email.com"
@@ -734,7 +743,7 @@ const selectedDay = calendarDays.find(
                 <label className="block text-sm font-medium text-muted-foreground mb-1">Telefone *</label>
                 <input 
                   type="tel" 
-                  value={formatPhone(initialFormData.phone) || formatPhone(formData.phone)}
+                  value={formatPhone(formData.phone)}
                   disabled={!!initialFormData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
                   placeholder="(11) 99999-9999"

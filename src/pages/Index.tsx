@@ -5,6 +5,7 @@ import { Features } from "@/components/landing/Features";
 import { HowItWorks } from "@/components/landing/HowItWorks";
 import { CTA } from "@/components/landing/CTA";
 import { Footer } from "@/components/landing/Footer";
+import PricingSection from "@/components/landing/Prices";
 
 const Index = () => {
   return (
@@ -14,6 +15,7 @@ const Index = () => {
         <Hero />
         <Features id="funcionalidades" />
         <HowItWorks id="como-funciona" />
+        <PricingSection id="valores"/>
         <CTA />
       </main>
       <Footer />

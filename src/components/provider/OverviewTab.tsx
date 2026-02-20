@@ -1,7 +1,7 @@
-import { Calendar, Clock } from "lucide-react";
-import StatusBadge from "../common/ChangeAppointments";
+import { Calendar, Clock, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface Appointment {
   id: string;
@@ -20,6 +20,9 @@ interface OverviewTabProps {
 }
 
 export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [localAppointments, setLocalAppointments] = useState(appointments);
+
   const formatTime = (time: string) => time.slice(0, 5);
 
   const formatDate = (dateStr: string) => {
@@ -56,12 +59,42 @@ export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) 
     }
   };
 
-  // Filter future appointments with valid status
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    // Atualização otimista
+    setLocalAppointments((prev) =>
+      prev.map((apt) =>
+        apt.id === id ? { ...apt, status: newStatus } : apt
+      )
+    );
+
+    setOpenId(null);
+
+    const { error } = await supabase
+      .from("appointments")
+      .update({ status: newStatus })
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao atualizar status");
+      return;
+    }
+
+    toast.success("Status atualizado");
+    onStatusChange();
+  };
+
   const now = new Date();
-  const futureAppointments = appointments.filter((apt) => {
-    const aptDateTime = new Date(`${apt.appointment_date}T${apt.start_time}`);
-    return aptDateTime > now && ["pending", "confirmed"].includes(apt.status);
-  });
+  const futureAppointments = localAppointments.filter((apt) => {
+  const aptDateTime = new Date(`${apt.appointment_date}T${apt.start_time}`);
+  const normalizedStatus = apt.status?.toLowerCase().trim();
+
+  return (
+    aptDateTime > now &&
+    normalizedStatus !== "cancelled" &&
+    normalizedStatus !== "completed"
+  );
+});
+
 
   return (
     <div className="space-y-6">
@@ -102,6 +135,7 @@ export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) 
                   {formatTime(apt.start_time)}
                 </span>
               </div>
+
               <div className="flex-1">
                 <h3 className="font-semibold text-card-foreground">
                   {apt.client_name}
@@ -112,22 +146,39 @@ export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) 
                   {apt.service?.duration_minutes || 60} min
                 </p>
               </div>
-                <StatusBadge
-                status={apt.status}
-                onChange={async (newStatus) => {
-                  const { error } = await supabase
-                    .from("appointments")
-                    .update({ status: newStatus })
-                    .eq("id", apt.id);
 
-                  if (error) {
-                    toast.error("Erro ao atualizar status");
-                  } else {
-                    toast.success("Status atualizado");
-                    onStatusChange();
+              {/* STATUS BADGE INLINE */}
+              <div className="relative">
+                <button
+                  onClick={() =>
+                    setOpenId(openId === apt.id ? null : apt.id)
                   }
-                }}
-              />
+                  className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${getStatusClasses(
+                    apt.status
+                  )}`}
+                >
+                  {getStatusLabel(apt.status)}
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+
+                {openId === apt.id && (
+                  <div className="absolute right-0 mt-2 w-40 bg-card border border-border rounded-lg shadow-lg z-50">
+                    {["pending", "confirmed", "cancelled", "completed"].map(
+                      (status) => (
+                        <button
+                          key={status}
+                          onClick={() =>
+                            handleStatusChange(apt.id, status)
+                          }
+                          className="w-full text-left px-4 py-2 hover:bg-muted text-sm"
+                        >
+                          {getStatusLabel(status)}
+                        </button>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           ))
         )}

@@ -5,12 +5,7 @@ import {
   Clock, 
   Users, 
   Settings, 
-  Plus, 
-  ChevronLeft,
-  ChevronRight,
-  Bell,
   Link as LinkIcon,
-  LogOut,
   User,
   LayoutDashboard,
   History,
@@ -19,13 +14,11 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { UserMenu } from "@/components/common/UserMenu";
 import { toast } from "sonner";
 import { ServicesTab } from "@/components/provider/ServicesTab";
 import { OverviewTab } from "@/components/provider/OverviewTab";
 import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
 import NotificationBell from "@/components/common/NotificationBell";
-import AvatarUpload from "@/components/common/AvatarUpload";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 
@@ -37,6 +30,7 @@ interface Appointment {
   start_time: string;
   end_time: string;
   status: string;
+  provider_id: string;
   profiles?: { avatar_url: string };
   service?: { name: string; duration_minutes: number } | null;
 }
@@ -119,6 +113,8 @@ export default function ProviderDashboard() {
     Domingo: { open: null, close: null, closed: true },
   };
 
+  
+
   const [workingHours, setWorkingHours] = useState<WorkingHours>(() => {
     if (!providerProfile?.working_hours) {
       return defaultWorkingHours;
@@ -188,6 +184,7 @@ export default function ProviderDashboard() {
   // evita cache antigo
   setBusinessPhoto(`${data.publicUrl}?t=${Date.now()}`);
 }, [providerProfile?.avatar_url]);
+
 
   useEffect(() => {
     if (user) {
@@ -420,8 +417,7 @@ export default function ProviderDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <NotificationBell todayAppointments={appointments}>
-              </NotificationBell>
+              <NotificationBell todayAppointments={appointments} providerId={providerProfile.id}></NotificationBell>
               <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
             </div>
           </div>

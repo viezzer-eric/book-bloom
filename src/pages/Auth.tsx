@@ -214,6 +214,15 @@ export default function Auth() {
         {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
         Entrar
       </Button>
+
+      <div className="text-center">
+        <Link
+          to="/esqueci-senha"
+          className="text-sm text-primary font-medium hover:underline"
+        >
+          Esqueci minha senha
+        </Link>
+      </div>
     </form>
   );
 

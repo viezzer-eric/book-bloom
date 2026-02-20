@@ -136,8 +136,8 @@ export default function AvatarUserMenu({
 
   return (
     <div className="flex items-center gap-3">
-      {/* container RELATIVO correto */}
       <div className={`relative group ${sizeClass}`}>
+        
         {isProfile ? (
           <div
             className={`${sizeClass} rounded-full bg-primary/10 flex items-center justify-center overflow-hidden`}

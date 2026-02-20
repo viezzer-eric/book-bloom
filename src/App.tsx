@@ -12,6 +12,8 @@ import Profile from "./pages/Profile";
 import BookingPage from "./pages/BookingPage";
 import SearchPage from "./pages/SearchPage";
 import NotFound from "./pages/NotFound";
+import ForgotPassword from "./pages/ForgotPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +32,8 @@ const App = () => (
             <Route path="/meus-agendamentos" element={<ClientDashboard />} />
             <Route path="/perfil" element={<Profile />} />
             <Route path="/agendar/:providerId" element={<BookingPage />} />
+            <Route path="/esqueci-senha" element={<ForgotPassword />} />
+            <Route path="/atualizar-senha" element={<UpdatePassword />} />
             {/* Legacy routes */}
             <Route path="/dashboard" element={<ProviderDashboard />} />
             <Route path="/book/:providerId" element={<BookingPage />} />
