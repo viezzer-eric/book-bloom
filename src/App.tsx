@@ -11,6 +11,8 @@ import ClientDashboard from "./pages/ClientDashboard";
 import Profile from "./pages/Profile";
 import BookingPage from "./pages/BookingPage";
 import SearchPage from "./pages/SearchPage";
+import ForgotPassword from "./pages/ForgotPassword";
+import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
@@ -28,6 +30,10 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/buscar" element={<SearchPage />} />
             <Route path="/entrar" element={<Auth />} />
+            <Route path="/esqueci-senha" element={<ForgotPassword />} />
+            <Route path="/atualizar-senha" element={<UpdatePassword />} />
+            {/* Legacy reset route — redirect to new page */}
+            <Route path="/reset-password" element={<UpdatePassword />} />
             <Route path="/painel" element={<ProviderDashboard />} />
             <Route path="/meus-agendamentos" element={<ClientDashboard />} />
             <Route path="/perfil" element={<Profile />} />
@@ -47,3 +53,4 @@ const App = () => (
 );
 
 export default App;
+

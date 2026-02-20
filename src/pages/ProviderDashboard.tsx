@@ -59,13 +59,13 @@ interface ProviderProfile {
   business_name: string;
   description: string | null;
   working_hours: any;
-  address: string;
-  cep: string;
-  state: string;
-  city: string;
-  neighborhood: string;
-  addressNumber: string;
-  avatar_url
+  address: string | null;
+  cep: string | null;
+  state: string | null;
+  city: string | null;
+  neighborhood: string | null;
+  addressNumber: string | null;
+  avatar_url?: string | null;
 }
 
 interface ClientAppointment {

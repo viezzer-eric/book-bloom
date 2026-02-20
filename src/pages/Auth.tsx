@@ -74,6 +74,8 @@ export default function Auth() {
     }
   };
 
+  // Forgot password is handled by the dedicated /esqueci-senha page
+
   const handleWhatsAppContact = () => {
     window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${WHATSAPP_MESSAGE}`, "_blank");
   };
