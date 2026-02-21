@@ -24,6 +24,33 @@ export default function SearchPage() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const hasFilters = searchTerm !== "" || selectedServiceType !== "";
+  const [selectedSort, setSelectedSort] = useState("name_asc");
+  
+  const filteredProviders = providers
+    .filter((provider) => {
+      const matchesSearch = provider.business_name
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
+      const matchesService =
+        !selectedServiceType ||
+        provider.services?.some((service) =>
+          service.name === selectedServiceType
+      );
+
+
+      return matchesSearch && matchesService;
+    })
+    .sort((a, b) => {
+      switch (selectedSort) {
+        case "name_asc":
+          return a.business_name.localeCompare(b.business_name);
+        case "name_desc":
+          return b.business_name.localeCompare(a.business_name);
+        default:
+          return 0;
+      }
+    });
 
   const fetchData = async () => {
       try {
@@ -92,14 +119,18 @@ export default function SearchPage() {
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               selectedServiceType={selectedServiceType}
-              onServiceTypeChange={(value) => setSelectedServiceType(value === "all" ? "" : value)}
+              onServiceTypeChange={(value) =>
+                setSelectedServiceType(value === "all" ? "" : value)
+              }
+              selectedSort={selectedSort}
+              onSortChange={setSelectedSort}
               serviceTypes={serviceTypes}
             />
           </div>
 
           {/* Lista de profissionais */}
           <ProviderList
-            providers={providers}
+            providers={filteredProviders}
             isLoading={isLoading}
             hasFilters={hasFilters}
           />

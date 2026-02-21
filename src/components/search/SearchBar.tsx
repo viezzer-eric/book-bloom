@@ -1,4 +1,4 @@
-import { Search, X } from "lucide-react";
+import { Search, X, ArrowUpDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -12,8 +12,13 @@ import { Button } from "@/components/ui/button";
 interface SearchBarProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
+
   selectedServiceType: string;
   onServiceTypeChange: (value: string) => void;
+
+  selectedSort: string;
+  onSortChange: (value: string) => void;
+
   serviceTypes: string[];
 }
 
@@ -22,19 +27,24 @@ export function SearchBar({
   onSearchChange,
   selectedServiceType,
   onServiceTypeChange,
+  selectedSort,
+  onSortChange,
   serviceTypes,
 }: SearchBarProps) {
-  const handleClearSearch = () => {
-    onSearchChange("");
-  };
+  const hasFilters =
+    searchTerm ||
+    selectedServiceType !== "" ||
+    selectedSort !== "name_asc";
 
-  const handleClearFilter = () => {
-    onServiceTypeChange("");
+  const handleClearAll = () => {
+    onSearchChange("");
+    onServiceTypeChange("all");
+    onSortChange("name_asc");
   };
 
   return (
-    <div className="w-full space-y-4">
-      {/* Barra de busca principal */}
+    <div className="w-full space-y-5">
+      {/* 🔎 Busca */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
@@ -42,25 +52,30 @@ export function SearchBar({
           placeholder="Buscar profissionais..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-12 pr-10 h-12 text-base bg-card border-border rounded-xl shadow-soft"
+          className="pl-12 pr-10 h-12 rounded-xl"
         />
+
         {searchTerm && (
           <button
-            onClick={handleClearSearch}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => onSearchChange("")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
             <X className="w-4 h-4" />
           </button>
         )}
       </div>
 
-      {/* Filtro por tipo de serviço */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <Select value={selectedServiceType} onValueChange={onServiceTypeChange}>
-          <SelectTrigger className="h-11 bg-card border-border rounded-xl flex-1">
-            <SelectValue placeholder="Filtrar por tipo de serviço" />
+      {/* 🎛 Filtros */}
+      <div className="flex flex-col md:flex-row gap-3">
+        {/* Serviço */}
+        <Select
+          value={selectedServiceType || "all"}
+          onValueChange={onServiceTypeChange}
+        >
+          <SelectTrigger className="h-11 rounded-xl flex-1">
+            <SelectValue placeholder="Tipo de serviço" />
           </SelectTrigger>
-          <SelectContent className="bg-card border-border z-50">
+          <SelectContent>
             <SelectItem value="all">Todos os serviços</SelectItem>
             {serviceTypes.map((service) => (
               <SelectItem key={service} value={service}>
@@ -70,16 +85,27 @@ export function SearchBar({
           </SelectContent>
         </Select>
 
-        {(searchTerm || selectedServiceType) && (
+        {/* Ordenação */}
+        <Select value={selectedSort} onValueChange={onSortChange}>
+          <SelectTrigger className="h-11 rounded-xl flex-1">
+            <ArrowUpDown className="w-4 h-4 mr-2 text-muted-foreground" />
+            <SelectValue placeholder="Ordenar por" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name_asc">Nome (A → Z)</SelectItem>
+            <SelectItem value="name_desc">Nome (Z → A)</SelectItem>
+            <SelectItem value="rating_desc">Melhor avaliados</SelectItem>
+            <SelectItem value="recent_desc">Mais recentes</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {hasFilters && (
           <Button
             variant="outline"
-            onClick={() => {
-              handleClearSearch();
-              handleClearFilter();
-            }}
+            onClick={handleClearAll}
             className="h-11 rounded-xl"
           >
-            Limpar filtros
+            Limpar
           </Button>
         )}
       </div>

@@ -1,6 +1,5 @@
 import { Bell } from "lucide-react";
 import { useMemo, useState, useEffect, useRef } from "react";
-import { useMemo, useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
