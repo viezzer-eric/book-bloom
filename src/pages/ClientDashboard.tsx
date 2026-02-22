@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
+import { ReviewModal } from "@/components/common/ReviewModal";
 
 interface Appointment {
   id: string;
@@ -14,7 +15,7 @@ interface Appointment {
   start_time: string;
   end_time: string;
   status: string;
-  provider?: { business_name: string } | null;
+  provider?: { id: string; business_name: string } | null;
   service?: { name: string; duration_minutes: number; price: number } | null;
 }
 
@@ -25,6 +26,11 @@ export default function ClientDashboard() {
   const [profile, setProfile] = useState<Profile| null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"proximos" | "historico">("proximos");
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
+  const [reviewedAppointments, setReviewedAppointments] = useState<string[]>([]);
+
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -51,10 +57,21 @@ export default function ClientDashboard() {
         .maybeSingle();
       setProfile(profileData);
 
+      // Buscar avaliações já feitas pelo cliente
+      const { data: reviewsData } = await supabase
+        .from("provider_reviews")
+        .select("appointment_id")
+        .eq("client_id", user!.id);
+
+      setReviewedAppointments(
+        reviewsData?.map(r => r.appointment_id) || []
+      );
+
+
       // Fetch appointments
       const { data: appointmentsData } = await supabase
         .from('appointments')
-        .select('*, provider:provider_profiles(business_name), service:services(name, duration_minutes, price)')
+        .select('*, provider:provider_profiles(business_name, id), service:services(name, duration_minutes, price)')
         .eq('client_id', user!.id)
         .order('appointment_date', { ascending: true })
         .order('start_time', { ascending: true });
@@ -97,8 +114,13 @@ export default function ClientDashboard() {
   }
 
   const today = new Date().toISOString().split('T')[0];
-  const upcomingAppointments = appointments.filter(apt => apt.status === "pending");
-  const pastAppointments = appointments.filter(apt => apt.status === "completed" || apt.status === "cancelled");
+  const upcomingAppointments = appointments.filter(
+    apt => apt.status === "pending" || apt.status === "confirmed"
+  ); 
+ const pastAppointments = appointments.filter(apt => apt.status === "completed" || apt.status === "cancelled");
+
+
+  
 
   return (
     <div className="min-h-screen bg-background">
@@ -202,6 +224,23 @@ export default function ClientDashboard() {
               )
             )}
 
+            {/* Modal Review */}
+            {selectedProviderId && selectedAppointmentId && user && (
+            <ReviewModal
+              open={reviewModalOpen}
+              onClose={() => setReviewModalOpen(false)}
+              providerId={selectedProviderId}
+              appointmentId={selectedAppointmentId}
+              userId={user.id}
+              onSuccess={() => {
+                setReviewedAppointments((prev) => [
+                  ...prev,
+                  selectedAppointmentId,
+                ]);
+              }}
+            />
+          )}
+            
             {activeTab === "historico" && (
               pastAppointments.length === 0 ? (
                 <div className="text-center py-12 bg-card rounded-xl border border-border">
@@ -210,28 +249,54 @@ export default function ClientDashboard() {
                   <p className="text-muted-foreground">Seus agendamentos passados aparecerão aqui.</p>
                 </div>
               ) : (
-                pastAppointments.map((apt) => (
-                  <div 
-                    key={apt.id}
-                    className="p-4 rounded-xl bg-card border border-border opacity-75"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <h3 className="font-semibold text-foreground">{apt.provider?.business_name || 'Profissional'}</h3>
-                        <p className="text-sm text-muted-foreground">{apt.service?.name || 'Serviço'}</p>
+                pastAppointments.map((apt) => {
+                  const providerId = apt.provider?.id;
+                  const canReview = apt.status === "completed" && providerId;
+                  const alreadyReviewed = reviewedAppointments.includes(apt.id);
+
+                  return (
+                    <div
+                      key={apt.id}
+                      className="p-4 rounded-xl bg-card border border-border opacity-75"
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <div>
+                          <h3 className="font-semibold text-foreground">
+                            {apt.provider?.business_name || "Profissional"}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {apt.service?.name || "Serviço"}
+                          </p>
+                        </div>
+
+                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
+                          {getStatusLabel(apt.status)}
+                        </span>
                       </div>
-                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-muted text-muted-foreground">
-                        {getStatusLabel(apt.status)}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        <span className="capitalize">{formatDate(apt.appointment_date)}</span>
+
+                      <div className="flex items-center justify-between text-sm text-muted-foreground">
+                        <div>
+                          {formatDate(apt.appointment_date)}
+                        </div>
+
+                        {canReview && (
+                          <Button
+                            size="sm"
+                            disabled={alreadyReviewed}
+                            onClick={() => {
+                              if (!providerId) return;
+                              setSelectedProviderId(providerId);
+                              setReviewModalOpen(true);
+                              setSelectedAppointmentId(apt.id); 
+                            }}
+                          >
+                            {alreadyReviewed ? "Avaliado" : "Avaliar"}
+                          </Button>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )
             )}
           </div>

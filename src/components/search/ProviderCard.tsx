@@ -1,4 +1,4 @@
-import { MapPin, Clock, Briefcase, ArrowRight } from "lucide-react";
+import { MapPin, Clock, Briefcase, ArrowRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
@@ -18,6 +18,7 @@ interface ProviderCardProps {
   description: string | null;
   address: string | null;
   services: Service[];
+  rating_average: number | null;
   avatar_url: string | null;
 }
 
@@ -27,7 +28,8 @@ export function ProviderCard({
   description,
   address,
   services,
-  avatar_url
+  avatar_url,
+  rating_average
 }: ProviderCardProps) {
 
   const minPrice = services.length > 0 
@@ -47,6 +49,7 @@ export function ProviderCard({
   return (
     <div className="bg-card border border-border rounded-2xl p-5 hover:border-primary/40 hover:shadow-medium transition-all duration-300 group">
       <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+        
         {/* Avatar/Inicial */}
         <div className="w-14 h-14 rounded-xl gradient-hero flex items-center justify-center text-primary-foreground text-xl font-display font-semibold shrink-0 overflow-hidden">
           {preview ? (
@@ -66,6 +69,16 @@ export function ProviderCard({
             {businessName}
           </h3>
 
+          {/* ⭐ Rating */}
+          {rating_average !== null && rating_average > 0 && (
+            <div className="flex items-center gap-1 mt-1">
+              <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+              <span className="text-sm font-medium text-foreground">
+                {rating_average.toFixed(1)}
+              </span>
+            </div>
+          )}
+
           {description && (
             <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
               {description}
@@ -73,15 +86,15 @@ export function ProviderCard({
           )}
 
           {/* Localização */}
-         {address && (
+          {address && (
             <a
               href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 mt-2 text-sm text-muted-foreground hover:text-primary transition cursor-pointer"
             >
-            <MapPin className="w-4 h-4" />
-            <span className="underline">{address}</span>
+              <MapPin className="w-4 h-4" />
+              <span className="underline">{address}</span>
             </a>
           )}
 

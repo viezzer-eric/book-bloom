@@ -16,6 +16,7 @@ interface Provider {
   description: string | null;
   address: string | null;
   addressNumber: string | null;
+  rating_average: number | null;
   services: Service[];
   avatar_url?: string | null;
 }
@@ -88,6 +89,7 @@ export function ProviderList({ providers, isLoading, hasFilters }: ProviderListP
           address={provider.address + ", "+ provider.addressNumber}
           services={provider.services}
           avatar_url={provider.avatar_url}
+          rating_average={provider.rating_average}
         />
       ))}
     </div>
