@@ -113,6 +113,50 @@ export type Database = {
         }
         Relationships: []
       }
+      provider_plan: {
+        Row: {
+          id: string
+          provider_id: string
+          plan_type: "free" | "basic" | "premium"
+          status: "active" | "inactive" | "cancelled" | "past_due"
+          started_at: string | null
+          expires_at: string | null
+          external_payment_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          provider_id: string
+          plan_type?: "free" | "basic" | "premium"
+          status?: "active" | "inactive" | "cancelled" | "past_due"
+          started_at?: string | null
+          expires_at?: string | null
+          external_payment_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          provider_id?: string
+          plan_type?: "free" | "basic" | "premium"
+          status?: "active" | "inactive" | "cancelled" | "past_due"
+          started_at?: string | null
+          expires_at?: string | null
+          external_payment_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+
+        Relationships: [
+          {
+            foreignKeyName: "provider_plan_provider_id_fkey"
+            columns: ["provider_id"]
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       provider_profiles: {
         Row: {
           address: string | null

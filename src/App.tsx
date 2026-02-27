@@ -14,6 +14,7 @@ import SearchPage from "./pages/SearchPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
+import CheckoutPage from "./pages/Checkout";
 
 const queryClient = new QueryClient();
 
@@ -28,6 +29,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/buscar" element={<SearchPage />} />
             <Route path="/entrar" element={<Auth />} />
+            <Route path="/checkout" element={<CheckoutPage/>} />
             {/* Legacy reset route — redirect to new page */}
             <Route path="/reset-password" element={<UpdatePassword />} />
             <Route path="/painel" element={<ProviderDashboard />} />
