@@ -59,12 +59,12 @@ export default function ClientDashboard() {
 
       // Buscar avaliações já feitas pelo cliente
       const { data: reviewsData } = await supabase
-        .from("provider_reviews")
+        .from("provider_reviews" as any)
         .select("appointment_id")
         .eq("client_id", user!.id);
 
       setReviewedAppointments(
-        reviewsData?.map(r => r.appointment_id) || []
+        (reviewsData as any[])?.map((r: any) => r.appointment_id) || []
       );
 
 
