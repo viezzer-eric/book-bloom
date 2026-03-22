@@ -21,6 +21,7 @@ import { ServicesTab } from "@/components/provider/ServicesTab";
 import { OverviewTab } from "@/components/provider/OverviewTab";
 import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
 import NotificationBell from "@/components/common/NotificationBell";
+import { FinancialTab } from "@/components/provider/FinancialTab";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 
