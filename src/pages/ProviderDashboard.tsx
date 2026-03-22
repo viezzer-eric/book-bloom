@@ -434,6 +434,7 @@ export default function ProviderDashboard() {
             <nav className="space-y-1">
               {[
                 { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
+                { id: "faturamento", icon: DollarSign, label: "Faturamento" },
                 { id: "agendamentos", icon: History, label: "Agendamentos" },
                 { id: "servicos", icon: Clock, label: "Serviços" },
                 { id: "clientes", icon: Users, label: "Clientes" },
