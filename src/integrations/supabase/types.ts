@@ -113,50 +113,6 @@ export type Database = {
         }
         Relationships: []
       }
-      provider_plan: {
-        Row: {
-          id: string
-          provider_id: string
-          plan_type: "free" | "basic" | "premium"
-          status: "active" | "inactive" | "cancelled" | "past_due"
-          started_at: string | null
-          expires_at: string | null
-          external_payment_id: string | null
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          provider_id: string
-          plan_type?: "free" | "basic" | "premium"
-          status?: "active" | "inactive" | "cancelled" | "past_due"
-          started_at?: string | null
-          expires_at?: string | null
-          external_payment_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          provider_id?: string
-          plan_type?: "free" | "basic" | "premium"
-          status?: "active" | "inactive" | "cancelled" | "past_due"
-          started_at?: string | null
-          expires_at?: string | null
-          external_payment_id?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-
-        Relationships: [
-          {
-            foreignKeyName: "provider_plan_provider_id_fkey"
-            columns: ["provider_id"]
-            referencedRelation: "provider_profiles"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
       provider_profiles: {
         Row: {
           address: string | null
@@ -171,8 +127,6 @@ export type Database = {
           state: string | null
           updated_at: string
           user_id: string
-          rating_average: number | null
-          rating_count: number | null
           working_hours: Json | null
         }
         Insert: {
@@ -207,62 +161,6 @@ export type Database = {
         }
         Relationships: []
       }
-      provider_reviews: {
-        Row: {
-          id: string
-          provider_id: string
-          client_id: string
-          appointment_id: string
-          rating: number
-          comment: string | null
-          created_at: string
-          updated_at: string
-        }
-
-        Insert: {
-          id?: string
-          provider_id: string
-          client_id: string
-          appointment_id: string
-          rating: number
-          comment?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-
-        Update: {
-          id?: string
-          provider_id?: string
-          client_id?: string
-          appointment_id?: string
-          rating?: number
-          comment?: string | null
-          created_at?: string
-          updated_at?: string
-        }
-
-        Relationships: [
-          {
-            foreignKeyName: "provider_reviews_provider_id_fkey"
-            columns: ["provider_id"]
-            referencedRelation: "providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_reviews_client_id_fkey"
-            columns: ["client_id"]
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "provider_reviews_appointment_id_fkey"
-            columns: ["appointment_id"]
-            referencedRelation: "appointments"
-            referencedColumns: ["id"]
-          }
-        ]
-      }
-
       services: {
         Row: {
           active: boolean

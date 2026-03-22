@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+
 import { Button } from "@/components/ui/button";
 import { 
   Calendar, 
@@ -8,6 +9,7 @@ import {
   Link as LinkIcon,
   User,
   LayoutDashboard,
+  DollarSign,
   History,
   Edit
 } from "lucide-react";
@@ -19,6 +21,7 @@ import { ServicesTab } from "@/components/provider/ServicesTab";
 import { OverviewTab } from "@/components/provider/OverviewTab";
 import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
 import NotificationBell from "@/components/common/NotificationBell";
+import { FinancialTab } from "@/components/provider/FinancialTab";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 
@@ -431,6 +434,7 @@ export default function ProviderDashboard() {
             <nav className="space-y-1">
               {[
                 { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
+                { id: "faturamento", icon: DollarSign, label: "Faturamento" },
                 { id: "agendamentos", icon: History, label: "Agendamentos" },
                 { id: "servicos", icon: Clock, label: "Serviços" },
                 { id: "clientes", icon: Users, label: "Clientes" },
@@ -466,6 +470,10 @@ export default function ProviderDashboard() {
           <main className="flex-1">
             {activeTab === "visao-geral" && (
               <OverviewTab appointments={appointments} onStatusChange={fetchData}/>
+            )}
+
+            {activeTab === "faturamento" && providerProfile && (
+              <FinancialTab providerId={providerProfile.id} />
             )}
 
             {activeTab === "agendamentos" && (
