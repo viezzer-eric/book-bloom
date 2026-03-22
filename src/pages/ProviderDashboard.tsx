@@ -472,6 +472,10 @@ export default function ProviderDashboard() {
               <OverviewTab appointments={appointments} onStatusChange={fetchData}/>
             )}
 
+            {activeTab === "faturamento" && providerProfile && (
+              <FinancialTab providerId={providerProfile.id} />
+            )}
+
             {activeTab === "agendamentos" && (
               <AppointmentsHistoryTab appointments={appointments} />
             )}
