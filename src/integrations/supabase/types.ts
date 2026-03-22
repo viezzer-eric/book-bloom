@@ -124,6 +124,8 @@ export type Database = {
           description: string | null
           id: string
           neighborhood: string | null
+          rating_average: number | null
+          rating_count: number | null
           state: string | null
           updated_at: string
           user_id: string
@@ -139,6 +141,8 @@ export type Database = {
           description?: string | null
           id?: string
           neighborhood?: string | null
+          rating_average?: number | null
+          rating_count?: number | null
           state?: string | null
           updated_at?: string
           user_id: string
@@ -154,12 +158,59 @@ export type Database = {
           description?: string | null
           id?: string
           neighborhood?: string | null
+          rating_average?: number | null
+          rating_count?: number | null
           state?: string | null
           updated_at?: string
           user_id?: string
           working_hours?: Json | null
         }
         Relationships: []
+      }
+      provider_reviews: {
+        Row: {
+          appointment_id: string
+          client_id: string
+          comment: string | null
+          created_at: string
+          id: string
+          provider_id: string
+          rating: number
+        }
+        Insert: {
+          appointment_id: string
+          client_id: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          provider_id: string
+          rating: number
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
+          comment?: string | null
+          created_at?: string
+          id?: string
+          provider_id?: string
+          rating?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_reviews_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "provider_reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       services: {
         Row: {

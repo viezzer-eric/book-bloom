@@ -61,6 +61,8 @@ export function useProviderSearch() {
       // Combinar profissionais com seus serviços
       const providersWithServices: ProviderWithServices[] = (providersData || []).map(provider => ({
         ...provider,
+        rating_average: (provider as any).rating_average ?? null,
+        rating_count: (provider as any).rating_count ?? null,
         services: (servicesData || []).filter(service => service.provider_id === provider.id)
       }));
 

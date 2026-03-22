@@ -36,14 +36,14 @@ export function ReviewModal({
     setLoading(true);
 
     const { error } = await supabase
-      .from("provider_reviews")
+      .from("provider_reviews" as any)
       .insert({
         provider_id: providerId,
         client_id: userId,
-        appointment_id: appointmentId, // ✅ agora correto
+        appointment_id: appointmentId,
         rating,
         comment: comment || null,
-      });
+      } as any);
 
     setLoading(false);
 
