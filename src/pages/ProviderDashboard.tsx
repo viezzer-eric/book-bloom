@@ -9,6 +9,7 @@ import {
   Link as LinkIcon,
   User,
   LayoutDashboard,
+  DollarSign,
   History,
   Edit
 } from "lucide-react";
