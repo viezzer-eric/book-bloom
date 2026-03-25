@@ -16,7 +16,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import { ServicesTab } from "@/components/provider/ServicesTab";
 import { OverviewTab } from "@/components/provider/OverviewTab";
 import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
