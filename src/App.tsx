@@ -16,6 +16,7 @@ import SearchPage from "./pages/SearchPage";
 import ForgotPassword from "./pages/ForgotPassword";
 import UpdatePassword from "./pages/UpdatePassword";
 import NotFound from "./pages/NotFound";
+import CheckoutPage from "./pages/Checkout";
 
 const queryClient = new QueryClient();
 

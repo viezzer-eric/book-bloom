@@ -124,11 +124,11 @@ export type Database = {
           description: string | null
           id: string
           neighborhood: string | null
+          rating_average: number | null
+          rating_count: number | null
           state: string | null
           updated_at: string
           user_id: string
-          rating_average: number | null
-          rating_count: number | null
           working_hours: Json | null
         }
         Insert: {
@@ -141,6 +141,8 @@ export type Database = {
           description?: string | null
           id?: string
           neighborhood?: string | null
+          rating_average?: number | null
+          rating_count?: number | null
           state?: string | null
           updated_at?: string
           user_id: string
@@ -156,6 +158,8 @@ export type Database = {
           description?: string | null
           id?: string
           neighborhood?: string | null
+          rating_average?: number | null
+          rating_count?: number | null
           state?: string | null
           updated_at?: string
           user_id?: string
@@ -165,60 +169,49 @@ export type Database = {
       }
       provider_reviews: {
         Row: {
-          id: string
-          provider_id: string
-          client_id: string
           appointment_id: string
-          rating: number
+          client_id: string
           comment: string | null
           created_at: string
-          updated_at: string
+          id: string
+          provider_id: string
+          rating: number
         }
-
         Insert: {
+          appointment_id: string
+          client_id: string
+          comment?: string | null
+          created_at?: string
           id?: string
           provider_id: string
-          client_id: string
-          appointment_id: string
           rating: number
+        }
+        Update: {
+          appointment_id?: string
+          client_id?: string
           comment?: string | null
           created_at?: string
-          updated_at?: string
-        }
-
-        Update: {
           id?: string
           provider_id?: string
-          client_id?: string
-          appointment_id?: string
           rating?: number
-          comment?: string | null
-          created_at?: string
-          updated_at?: string
         }
-
         Relationships: [
-          {
-            foreignKeyName: "provider_reviews_provider_id_fkey"
-            columns: ["provider_id"]
-            referencedRelation: "providers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "provider_reviews_client_id_fkey"
-            columns: ["client_id"]
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "provider_reviews_appointment_id_fkey"
             columns: ["appointment_id"]
+            isOneToOne: false
             referencedRelation: "appointments"
             referencedColumns: ["id"]
-          }
+          },
+          {
+            foreignKeyName: "provider_reviews_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "provider_profiles"
+            referencedColumns: ["id"]
+          },
         ]
       }
-
       services: {
         Row: {
           active: boolean
