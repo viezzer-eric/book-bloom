@@ -4,7 +4,7 @@ import { Calendar, Clock, MapPin, ChevronLeft, ChevronRight, Check, Loader2 } fr
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 interface Service {
   id: string;
