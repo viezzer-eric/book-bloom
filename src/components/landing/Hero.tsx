@@ -16,11 +16,11 @@ export function Hero() {
     <section className="relative min-h-[90vh] flex items-center overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 gradient-hero opacity-95" />
-      
+
       {/* Decorative elements */}
       <div className="absolute top-20 right-10 w-72 h-72 bg-primary-foreground/10 rounded-full blur-3xl animate-pulse-soft" />
       <div className="absolute bottom-20 left-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse-soft" style={{ animationDelay: '1s' }} />
-      
+
       <div className="container relative z-10 mx-auto px-4 py-20">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Left content */}
@@ -29,7 +29,7 @@ export function Hero() {
               <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
               <span className="text-sm font-medium text-primary-foreground/90">Agendamento simplificado</span>
             </div>
-            
+
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-primary-foreground leading-tight text-balance">
               Agende com{" "}
               <span className="relative">
@@ -39,12 +39,12 @@ export function Hero() {
                 </svg>
               </span>
             </h1>
-            
+
             <p className="text-lg md:text-xl text-primary-foreground/80 max-w-xl leading-relaxed font-body">
-              A plataforma intuitiva de agendamento para profissionais de serviços. Gerencie sua agenda, 
+              A plataforma intuitiva de agendamento para profissionais de serviços. Gerencie sua agenda,
               receba reservas e encante seus clientes — tudo em um só lugar.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4">
               <Link to="/entrar?mode=register&role=provider">
                 <Button variant="hero" size="xl">
@@ -62,26 +62,26 @@ export function Hero() {
             <div className="flex items-center gap-6 pt-4">
               <div className="flex -space-x-3">
                 {[1, 2, 3, 4].map((i) => (
-                  <div 
+                  <div
                     key={i}
                     className="w-10 h-10 rounded-full bg-primary-foreground/20 border-2 border-primary-foreground/30 flex items-center justify-center text-primary-foreground/70 text-xs font-medium"
                   >
-                    {['A', 'M', 'S', 'J'][i-1]}
+                    {['A', 'M', 'S', 'J'][i - 1]}
                   </div>
                 ))}
               </div>
-                <div className="text-primary-foreground/80">
-                    {providersCount > 0 ? (
-                      <>
-                        <span className="font-semibold">{providersCount}</span> profissionais confiam em nós
-                      </>
-                    ) : (
-                      <span className="font-semibold">Seja o primeiro Profissional com descontos IMPERDIVEIS</span>
-                    )}
-                </div>
+              <div className="text-primary-foreground/80">
+                {providersCount > 0 ? (
+                  <>
+                    <span className="font-semibold">{providersCount}</span> profissionais confiam em nós
+                  </>
+                ) : (
+                  <span className="font-semibold">Seja o primeiro Profissional com descontos IMPERDIVEIS</span>
+                )}
+              </div>
             </div>
           </div>
-          
+
           {/* Right content - Floating cards */}
           <div className="relative hidden lg:block animate-fade-up" style={{ animationDelay: '0.2s' }}>
             <div className="relative">
@@ -111,7 +111,7 @@ export function Hero() {
                   ))}
                 </div>
               </div>
-              
+
               {/* Floating notification */}
               <div className="absolute -top-4 -right-4 bg-card rounded-xl shadow-soft p-4 animate-float" style={{ animationDelay: '0.5s' }}>
                 <div className="flex items-center gap-3">

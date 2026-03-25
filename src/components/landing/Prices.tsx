@@ -1,85 +1,308 @@
-import React from "react";
+"use client";
+import React, { useRef, useState } from "react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { TimelineContent } from "@/components/ui/timeline-animation";
+import { VerticalCutReveal } from "@/components/ui/vertical-cut-reveal";
+import { cn } from "@/lib/utils";
+import NumberFlow from "@number-flow/react";
+import { CheckCheck } from "lucide-react";
+import { motion } from "motion/react";
 
 const plans = [
   {
-    title: "Teste Gratuito",
-    price: "15 dias grátis",
-    description:
-      "Experimente todas as funcionalidades da plataforma durante 15 dias, sem compromisso e sem necessidade de cartão.",
-    highlight: false,
-    badge: null,
+    name: "Teste Gratuito",
+    description: "Experimente as funcionalidades basicas da plataforma durante 15 dias, sem compromisso.",
+    price: 0,
+    yearlyPrice: 0,
+    buttonText: "Começar agora",
+    buttonVariant: "outline" as const,
+    features: [
+      "Acesso restrito",
+      "15 dias de duração",
+    ],
+    includes: [
+      "Acesso restrito",
+      "Controle de agendamentos"
+    ],
   },
   {
-    title: "Plano Mensal",
-    price: "R$ 50/mês",
-    description:
-      "Utilize o sistema sem limitações, com acesso completo a todas as funcionalidades para gerenciar seu negócio.",
-    highlight: true,
+    name: "Plano Mensal",
+    description: "Utilize o sistema sem limitações, com acesso completo para gerenciar seu negócio.",
+    price: 50,
+    yearlyPrice: 504,
+    popular: true,
     badge: "Melhor Oferta",
+    buttonText: "Começar agora",
+    buttonVariant: "default" as const,
+    features: [
+      "Acesso ilimitado",
+      "Todas as funcionalidades",
+      "Suporte prioritário",
+    ],
+    includes: [
+      "Acesso ilimitado",
+      "Gestão de clientes",
+      "Controle de agendamentos"
+    ],
   },
   {
-    title: "Plano Mensal + Controle Financeiro",
-    price: "R$ 80/mês",
-    description:
-      "Tenha acesso ao módulo completo de controle financeiro para organizar receitas, despesas e acompanhar o crescimento do seu negócio.",
-    highlight: false,
-    badge: null,
+    name: "Mensal + Financeiro",
+    description: "Módulo completo de controle financeiro para organizar receitas e despesas.",
+    price: 80,
+    yearlyPrice: 806.40,
+    buttonText: "Começar agora",
+    buttonVariant: "outline" as const,
+    features: [
+      "Controle financeiro",
+      "Fluxo de caixa",
+      "Relatórios de lucro",
+    ],
+    includes: [
+      "Tudo no Mensal, mais:",
+      "Gestão de despesas",
+      "Gráficos financeiros",
+      "Suporte prioritário",
+    ],
   },
 ];
 
-export default function PricingSection({ id }: { id?: string }) {
+const PricingSwitch = ({
+  selected,
+  onSwitch,
+  className,
+}: {
+  selected: string;
+  onSwitch: (value: string) => void;
+  className?: string;
+}) => {
+  const handleSwitch = (value: string) => {
+    onSwitch(value);
+  };
+
   return (
-    <section id={id ?? "valores"} className="py-20 bg-muted/30">
-      <div className="container mx-auto px-6">
-        <div className="text-center mb-14">
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Planos e Valores
+    <div className={cn("flex justify-center", className)}>
+      <div className="relative z-10 mx-auto flex w-fit rounded-full bg-secondary border border-border p-1">
+        <button
+          onClick={() => handleSwitch("0")}
+          className={cn(
+            "relative z-10 w-fit sm:h-12 cursor-pointer h-10 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
+            selected === "0"
+              ? "text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {selected === "0" && (
+            <motion.span
+              layoutId={"switch"}
+              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full bg-primary shadow-sm"
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+          <span className="relative">Mensal</span>
+        </button>
+
+        <button
+          onClick={() => handleSwitch("1")}
+          className={cn(
+            "relative z-10 w-fit cursor-pointer sm:h-12 h-10 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
+            selected === "1"
+              ? "text-primary-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {selected === "1" && (
+            <motion.span
+              layoutId={"switch"}
+              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full bg-primary shadow-sm"
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          )}
+          <span className="relative flex items-center gap-2">
+            Anual
+            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-accent">
+              -16%
+            </span>
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default function PricingSection({ id }: { id?: string }) {
+  const [isYearly, setIsYearly] = useState(false);
+  const pricingRef = useRef<HTMLDivElement>(null);
+
+  const revealVariants = {
+    visible: (i: number) => ({
+      y: 0,
+      opacity: 1,
+      filter: "blur(0px)",
+      transition: {
+        delay: i * 0.2,
+        duration: 0.5,
+      },
+    }),
+    hidden: {
+      filter: "blur(10px)",
+      y: -20,
+      opacity: 0,
+    },
+  };
+
+  const togglePricingPeriod = (value: string) =>
+    setIsYearly(Number.parseInt(value) === 1);
+
+  return (
+    <section
+      id={id ?? "valores"}
+      className="px-4 py-24 min-h-screen max-w-7xl mx-auto relative overflow-hidden"
+      ref={pricingRef}
+    >
+      <article className="flex sm:flex-row flex-col sm:pb-12 pb-8 sm:items-center items-start justify-between">
+        <div className="text-left mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold font-display leading-[120%] text-foreground mb-4">
+            <VerticalCutReveal
+              splitBy="words"
+              staggerDuration={0.15}
+              staggerFrom="first"
+              reverse={true}
+              containerClassName="justify-start"
+              transition={{
+                type: "spring",
+                stiffness: 250,
+                damping: 40,
+                delay: 0,
+              }}
+            >
+              Planos e Valores
+            </VerticalCutReveal>
           </h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto">
+
+          <TimelineContent
+            as="p"
+            animationNum={0}
+            timelineRef={pricingRef}
+            customVariants={revealVariants}
+            className="text-muted-foreground max-w-xl text-lg"
+          >
             Escolha o plano ideal para o seu momento e comece a organizar seu
             negócio de forma simples e eficiente.
-          </p>
+          </TimelineContent>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8">
-          {plans.map((plan, index) => (
-            <div
-              key={index}
-              className={`relative rounded-2xl shadow-md p-8 bg-background border transition-all duration-300 hover:shadow-xl ${
-                plan.highlight
-                  ? "border-primary scale-105"
-                  : "border-border"
-              }`}
-            >
-              {plan.badge && (
-                <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-semibold px-4 py-1 rounded-full shadow-md">
-                  {plan.badge}
-                </span>
+        <TimelineContent
+          as="div"
+          animationNum={1}
+          timelineRef={pricingRef}
+          customVariants={revealVariants}
+        >
+          <PricingSwitch
+            selected={isYearly ? "1" : "0"}
+            onSwitch={togglePricingPeriod}
+            className="shrink-0"
+          />
+        </TimelineContent>
+      </article>
+
+      <div className="grid md:grid-cols-3 gap-8 mx-auto relative z-10">
+        {plans.map((plan, index) => (
+          <TimelineContent
+            as="div"
+            key={plan.name}
+            animationNum={index + 2}
+            timelineRef={pricingRef}
+            customVariants={revealVariants}
+          >
+            <Card
+              className={cn(
+                "relative flex-col flex h-full transition-all duration-500 hover:shadow-glow border-border",
+                plan.popular
+                  ? "scale-105 shadow-medium border-primary/50 bg-gradient-card"
+                  : "bg-background hover:border-primary/30"
               )}
+            >
+              <CardContent className="pt-8 px-8">
+                <div className="space-y-4 pb-6">
+                  {plan.popular && (
+                    <div className="mb-2">
+                      <span className="bg-primary text-primary-foreground px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
+                        {plan.badge || "Popular"}
+                      </span>
+                    </div>
+                  )}
 
-              <h3 className="text-xl font-semibold mb-4 mt-2">
-                {plan.title}
-              </h3>
+                  <div className="flex items-baseline">
+                    <span className="text-4xl font-bold text-foreground">
+                      {plan.price === 0 ? (
+                        "Grátis"
+                      ) : (
+                        <>
+                          <span className="text-2xl mr-1 font-medium italic">R$</span>
+                          <NumberFlow
+                            format={{
+                              minimumFractionDigits: 0,
+                            }}
+                            value={isYearly ? plan.yearlyPrice : plan.price}
+                            className="text-5xl font-bold tracking-tight"
+                          />
+                        </>
+                      )}
+                    </span>
+                    {plan.price > 0 && (
+                      <span className="text-muted-foreground ml-2 text-sm">
+                        /{isYearly ? "ano" : "mês"}
+                      </span>
+                    )}
+                  </div>
+                </div>
 
-              <p className="text-2xl font-bold mb-6">{plan.price}</p>
+                <div className="mb-4">
+                  <h3 className="text-2xl font-bold font-display">{plan.name}</h3>
+                </div>
+                <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
+                  {plan.description}
+                </p>
 
-              <p className="text-muted-foreground mb-6">
-                {plan.description}
-              </p>
-
-              <button
-                className={`w-full py-3 rounded-xl font-medium transition-colors ${
-                  plan.highlight
-                    ? "bg-primary text-primary-foreground hover:opacity-90"
-                    : "bg-secondary text-secondary-foreground hover:opacity-90"
-                }`}
-              >
-                Começar agora
-              </button>
-            </div>
-          ))}
-        </div>
+                <div className="space-y-4 pt-6 border-t border-border/50">
+                  <h4 className="font-semibold text-sm text-foreground uppercase tracking-widest flex items-center gap-2">
+                    <div className="w-1 h-4 bg-primary rounded-full" />
+                    {plan.includes[0]}
+                  </h4>
+                  <ul className="space-y-3">
+                    {plan.includes.slice(1).map((feature, featureIndex) => (
+                      <li key={featureIndex} className="flex items-center gap-3">
+                        <div className="flex-shrink-0 w-5 h-5 bg-primary/10 rounded-full flex items-center justify-center">
+                          <CheckCheck className="h-3 w-3 text-primary stroke-[3]" />
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {feature}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+              <CardFooter className="p-8 mt-auto">
+                <button
+                  className={cn(
+                    "w-full py-4 text-base font-bold rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95",
+                    plan.popular
+                      ? "bg-primary text-primary-foreground shadow-medium hover:shadow-glow"
+                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                  )}
+                >
+                  {plan.buttonText}
+                </button>
+              </CardFooter>
+            </Card>
+          </TimelineContent>
+        ))}
       </div>
+
+      {/* Background blobs for aesthetics */}
+      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-primary/5 rounded-full blur-[100px] -z-10" />
+      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-accent/5 rounded-full blur-[100px] -z-10" />
     </section>
   );
 }
