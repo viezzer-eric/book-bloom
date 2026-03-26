@@ -25,7 +25,7 @@ const steps = [
 
 export function HowItWorks({ id }: { id?: string }) {
   return (
-    <section className="py-24 bg-background relative overflow-hidden" id={id}>
+    <section className="pt-0 pb-24 bg-background/50 relative overflow-hidden" id={id}>
       {/* ── Animated background (matching Hero) ── */}
       <div className="absolute inset-0 -z-10">
         {/* Grain overlay */}
@@ -95,13 +95,13 @@ export function HowItWorks({ id }: { id?: string }) {
             viewport={{ once: false, margin: "-100px" }}
             className="text-lg text-muted-foreground leading-relaxed"
           >
-            Configuração rápida, agenda inteligente e agendamentos simples. 
+            Configuração rápida, agenda inteligente e agendamentos simples.
             Tudo pensado para que você foque na excelência do seu atendimento.
           </motion.p>
         </div>
 
         {/* Feature grid with staggered animations */}
-        <motion.div 
+        <motion.div
           initial="hidden"
           whileInView="visible"
           viewport={{ once: false, margin: "-100px" }}
@@ -127,7 +127,7 @@ export function HowItWorks({ id }: { id?: string }) {
               {/* Connector line with pulse animation */}
               {index < steps.length - 1 && (
                 <div className="hidden lg:block absolute top-12 left-[80%] w-[40%] h-[2px] z-0 overflow-hidden pointer-events-none">
-                  <motion.div 
+                  <motion.div
                     initial={{ x: "-100%" }}
                     whileInView={{ x: "100%" }}
                     transition={{ duration: 2, repeat: Infinity, ease: "linear", delay: 1 }}
@@ -151,7 +151,7 @@ export function HowItWorks({ id }: { id?: string }) {
                 <h3 className="text-2xl font-semibold text-foreground mb-4 group-hover:text-primary transition-colors duration-300">
                   {step.title}
                 </h3>
-                
+
                 <p className="text-muted-foreground mb-8 leading-relaxed">
                   {step.description}
                 </p>

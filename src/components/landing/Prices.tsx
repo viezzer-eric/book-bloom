@@ -66,60 +66,53 @@ const plans = [
   },
 ];
 
-const PricingSwitch = ({
-  selected,
-  onSwitch,
-  className,
-}: {
-  selected: string;
-  onSwitch: (value: string) => void;
+interface PricingSwitchProps {
+  isYearly: boolean;
+  onSwitch: (value: boolean) => void;
   className?: string;
-}) => {
-  const handleSwitch = (value: string) => {
-    onSwitch(value);
-  };
+}
 
+const PricingSwitch = ({ isYearly, onSwitch, className }: PricingSwitchProps) => {
   return (
     <div className={cn("flex justify-center", className)}>
-      <div className="relative z-10 mx-auto flex w-fit rounded-full bg-secondary border border-border p-1">
+      <div className="relative z-10 mx-auto flex w-fit rounded-full bg-secondary/50 border border-border p-1.5 backdrop-blur-sm">
         <button
-          onClick={() => handleSwitch("0")}
+          onClick={() => onSwitch(false)}
           className={cn(
-            "relative z-10 w-fit sm:h-12 cursor-pointer h-10 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
-            selected === "0"
-              ? "text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
+            "relative z-10 w-32 h-11 flex items-center justify-center rounded-full text-sm font-bold transition-all duration-300",
+            !isYearly ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {selected === "0" && (
+          {!isYearly && (
             <motion.span
-              layoutId={"switch"}
-              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full bg-primary shadow-sm"
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              layoutId="pricing-pill"
+              className="absolute inset-0 rounded-full bg-primary shadow-lg"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />
           )}
-          <span className="relative">Mensal</span>
+          <span className="relative z-20">Mensal</span>
         </button>
 
         <button
-          onClick={() => handleSwitch("1")}
+          onClick={() => onSwitch(true)}
           className={cn(
-            "relative z-10 w-fit cursor-pointer sm:h-12 h-10 flex-shrink-0 rounded-full sm:px-6 px-3 sm:py-2 py-1 font-medium transition-colors",
-            selected === "1"
-              ? "text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
+            "relative z-10 w-40 h-11 flex items-center justify-center rounded-full text-sm font-bold transition-all duration-300 gap-2",
+            isYearly ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
           )}
         >
-          {selected === "1" && (
+          {isYearly && (
             <motion.span
-              layoutId={"switch"}
-              className="absolute top-0 left-0 sm:h-12 h-10 w-full rounded-full bg-primary shadow-sm"
-              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+              layoutId="pricing-pill"
+              className="absolute inset-0 rounded-full bg-primary shadow-lg"
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
             />
           )}
-          <span className="relative flex items-center gap-2">
+          <span className="relative z-20 flex items-center gap-2">
             Anual
-            <span className="rounded-full bg-accent/20 px-2 py-0.5 text-xs font-medium text-accent">
+            <span className={cn(
+              "px-2 py-0.5 text-[10px] rounded-full font-black uppercase tracking-tighter",
+              isYearly ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
+            )}>
               -16%
             </span>
           </span>
@@ -150,47 +143,14 @@ export default function PricingSection({ id }: { id?: string }) {
     },
   };
 
-  const togglePricingPeriod = (value: string) =>
-    setIsYearly(Number.parseInt(value) === 1);
-
   return (
     <section
       id={id ?? "valores"}
-      className="px-4 py-24 min-h-screen max-w-7xl mx-auto relative overflow-hidden"
+      className="px-4 py-32 min-h-screen max-w-7xl mx-auto relative overflow-hidden"
       ref={pricingRef}
     >
-      <article className="flex sm:flex-row flex-col sm:pb-12 pb-8 sm:items-center items-start justify-between">
-        <div className="text-left mb-6">
-          <h2 className="text-4xl md:text-5xl font-bold font-display leading-[120%] text-foreground mb-4">
-            <VerticalCutReveal
-              splitBy="words"
-              staggerDuration={0.15}
-              staggerFrom="first"
-              reverse={true}
-              containerClassName="justify-start"
-              transition={{
-                type: "spring",
-                stiffness: 250,
-                damping: 40,
-                delay: 0,
-              }}
-            >
-              Planos e Valores
-            </VerticalCutReveal>
-          </h2>
-
-          <TimelineContent
-            as="p"
-            animationNum={0}
-            timelineRef={pricingRef}
-            customVariants={revealVariants}
-            className="text-muted-foreground max-w-xl text-lg"
-          >
-            Escolha o plano ideal para o seu momento e comece a organizar seu
-            negócio de forma simples e eficiente.
-          </TimelineContent>
-        </div>
-
+      {/* Billing Cycle Toggle - Simplified and Robust */}
+      <div className="flex justify-center mb-16 relative z-30">
         <TimelineContent
           as="div"
           animationNum={1}
@@ -198,12 +158,12 @@ export default function PricingSection({ id }: { id?: string }) {
           customVariants={revealVariants}
         >
           <PricingSwitch
-            selected={isYearly ? "1" : "0"}
-            onSwitch={togglePricingPeriod}
+            isYearly={isYearly}
+            onSwitch={setIsYearly}
             className="shrink-0"
           />
         </TimelineContent>
-      </article>
+      </div>
 
       <div className="grid md:grid-cols-3 gap-8 mx-auto relative z-10">
         {plans.map((plan, index) => (
@@ -258,16 +218,18 @@ export default function PricingSection({ id }: { id?: string }) {
                 </div>
 
                 <div className="mb-4">
-                  <h3 className="text-2xl font-bold font-display">{plan.name}</h3>
+                  <h3 className="text-2xl font-bold font-display">
+                    {plan.name.replace("Mensal", isYearly ? "Anual" : "Mensal")}
+                  </h3>
                 </div>
                 <p className="text-muted-foreground mb-8 text-sm leading-relaxed">
-                  {plan.description}
+                  {plan.description.replace("sistema sem limitações", isYearly ? "sistema completo com desconto" : "sistema sem limitações")}
                 </p>
 
                 <div className="space-y-4 pt-6 border-t border-border/50">
                   <h4 className="font-semibold text-sm text-foreground uppercase tracking-widest flex items-center gap-2">
                     <div className="w-1 h-4 bg-primary rounded-full" />
-                    {plan.includes[0]}
+                    {plan.includes[0].replace("Mensal", isYearly ? "Anual" : "Mensal")}
                   </h4>
                   <ul className="space-y-3">
                     {plan.includes.slice(1).map((feature, featureIndex) => (

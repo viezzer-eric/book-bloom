@@ -10,7 +10,7 @@ import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from
 import { cn } from "@/lib/utils";
 
 const WHATSAPP_MESSAGE = encodeURIComponent(
-  "Olá! Tenho interesse em me cadastrar como prestador de serviço na plataforma BookBloom!"
+  "Olá! Tenho interesse em me cadastrar como prestador de serviço na plataforma Bookly"
 );
 
 const APPOINTMENT_CASES = [
@@ -201,10 +201,10 @@ export default function Auth() {
               <motion.div layoutId="billing-bg" className="absolute inset-0 bg-primary rounded-full -z-10 shadow-lg" />
             )}
             <span className={cn(
-              "px-1.5 py-0.5 rounded-md text-[8px] uppercase tracking-tighter",
+              "px-1.5 py-0.5 rounded-md text-[8px] uppercase font-bold tracking-tighter",
               billingCycle === "annually" ? "bg-white/20 text-white" : "bg-primary/10 text-primary"
             )}>
-              15% OFF
+              16% OFF
             </span>
           </button>
         </div>
@@ -214,19 +214,21 @@ export default function Auth() {
         {PLANS.map((plan) => {
           const isFree = plan.id === "free";
           const monthlyPrice = parseInt(plan.price.replace("R$ ", ""));
-          const yearlyPrice = Math.floor(monthlyPrice * 12 * 0.85); // 15% discount
-          
-          const displayPrice = isFree 
-            ? "R$ 0" 
-            : billingCycle === "monthly" 
-              ? plan.price 
+          const yearlyPrice = Math.floor(monthlyPrice * 12 * 0.84); // 16% discount to match Prices.tsx
+
+          const displayPrice = isFree
+            ? "R$ 0"
+            : billingCycle === "monthly"
+              ? plan.price
               : `R$ ${yearlyPrice}`;
-              
-          const displayPeriod = isFree 
-            ? "15 dias" 
-            : billingCycle === "monthly" 
-              ? "/mês" 
+
+          const displayPeriod = isFree
+            ? "15 dias"
+            : billingCycle === "monthly"
+              ? "/mês"
               : "/ano";
+
+          const dynamicName = plan.name.replace("Mensal", billingCycle === "annually" ? "Anual" : "Mensal");
 
           return (
             <motion.div
@@ -237,8 +239,8 @@ export default function Auth() {
                 "relative p-5 rounded-2xl cursor-pointer transition-all duration-300 border-2 overflow-hidden",
                 "bg-gradient-to-br",
                 plan.color,
-                selectedPlan === plan.id 
-                  ? "border-primary ring-4 ring-primary/10" 
+                selectedPlan === plan.id
+                  ? "border-primary ring-4 ring-primary/10"
                   : "border-transparent hover:border-white/40"
               )}
             >
@@ -247,10 +249,10 @@ export default function Auth() {
                   Mais Popular
                 </div>
               )}
-              
+
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h4 className="font-bold text-lg text-foreground">{plan.name}</h4>
+                  <h4 className="font-bold text-lg text-foreground">{dynamicName}</h4>
                   <div className="flex items-baseline gap-1">
                     <span className="text-2xl font-bold text-foreground transition-all duration-500">{displayPrice}</span>
                     <span className="text-muted-foreground text-sm">{displayPeriod}</span>
@@ -273,7 +275,7 @@ export default function Auth() {
                 {plan.features.map((feature, i) => (
                   <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCheck className="w-3 h-3 text-primary flex-shrink-0" />
-                    {feature}
+                    {feature.replace("Mensal", billingCycle === "annually" ? "Anual" : "Mensal")}
                   </li>
                 ))}
               </ul>
@@ -283,14 +285,14 @@ export default function Auth() {
       </div>
 
       <div className="pt-4 space-y-3">
-        <Button 
-          onClick={handleSubmit} 
+        <Button
+          onClick={handleSubmit}
           className="w-full h-14 rounded-xl text-lg font-bold shadow-xl shadow-primary/20 transition-all hover:scale-[1.01]"
           disabled={isLoading}
         >
           {isLoading ? <Loader2 className="w-5 h-5 mr-2 animate-spin" /> : "Finalizar cadastro"}
         </Button>
-        <button 
+        <button
           onClick={() => setStep(1)}
           className="w-full text-sm text-muted-foreground hover:text-foreground font-medium flex items-center justify-center gap-1 group"
         >
@@ -526,7 +528,7 @@ export default function Auth() {
                 >
                   <Calendar className="w-6 h-6 text-primary-foreground" />
                 </motion.div>
-                <span className="text-3xl font-display font-bold text-foreground tracking-tight group-hover:text-primary transition-colors">BookBloom</span>
+                <span className="text-3xl font-display font-bold text-foreground tracking-tight group-hover:text-primary transition-colors">Bookly</span>
               </Link>
 
               <AnimatePresence mode="wait">

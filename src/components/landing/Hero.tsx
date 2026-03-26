@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Calendar, Clock, Users, ArrowRight, Star, CheckCircle } from "lucide-react";
+import { Calendar, Users, ArrowRight, Star, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { providerRepository } from "@/repositories/providerRepository";
 import { useEffect, useState, useRef } from "react";
