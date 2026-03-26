@@ -5,6 +5,10 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
+import { useProfile } from "@/hooks/useProfiles";
+import { useProviderById } from "@/hooks/useProviders";
+import { useServicesByProvider } from "@/hooks/useServices";
+import { useAppointmentsByProvider, useCreateAppointment } from "@/hooks/useAppointments";
 
 interface Service {
   id: string;
@@ -49,7 +53,6 @@ export default function BookingPage() {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [AppointmentSchedule, setAppointmentSchedule] = useState<AppointmentSchedule[]>([]);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -62,11 +65,17 @@ export default function BookingPage() {
     phone: '',
   });
   const [isBooked, setIsBooked] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [provider, setProvider] = useState<ProviderProfile | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
+
+  const { data: provider, isLoading: isProviderLoading } = useProviderById(providerId);
+  const { data: allServices = [], isLoading: isServicesLoading } = useServicesByProvider(providerId);
+  const services = allServices.filter((s: any) => s.active);
+  const { data: AppointmentSchedule = [], isLoading: isAppointmentsLoading } = useAppointmentsByProvider(providerId);
+  const { data: userProfile, isLoading: isProfileLoading } = useProfile(user?.id);
+  const createAppointment = useCreateAppointment();
+  
+  const isLoading = isProviderLoading || isServicesLoading || isAppointmentsLoading || isProfileLoading;
 
     function generateTimeSlots(
       open: string | null,
@@ -187,48 +196,7 @@ export default function BookingPage() {
     selectedService,
   ]);
 
-  useEffect(() => {
-    if (providerId) {
-      fetchProviderData();
-    }
-  }, [providerId]);
 
-  const fetchProviderData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch provider profile
-      const { data: providerData, error: providerError } = await supabase
-        .from('provider_profiles')
-        .select('*')
-        .eq('id', providerId)
-        .maybeSingle();
-
-      if (providerError || !providerData) {
-        console.error('Provider not found');
-        return;
-      }
-      setProvider(providerData);
-
-      // Fetch services
-      const { data: servicesData } = await supabase
-        .from('services')
-        .select('*')
-        .eq('provider_id', providerId)
-        .eq('active', true);
-      setServices(servicesData || []); 
-      
-      const { data: appointmentData } = await supabase
-      .from('appointments')
-      .select('appointment_date, start_time, end_time, status')
-      .eq('provider_id', providerId);
-      setAppointmentSchedule(appointmentData || []); 
-      
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   function formatPhone(value) {
     if(!value) return;
@@ -242,36 +210,24 @@ export default function BookingPage() {
 }
 
 useEffect(() => {
-  const loadProfile = async () => {
-    if (!user) return;
+  if (userProfile) {
+    const profile = {
+      name: userProfile.full_name || "",
+      email: userProfile.email || "",
+      phone: userProfile.phone || "",
+    };
 
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("email", user.email)
-      .maybeSingle();
+    setinitialFormData(profile);
 
-    if (profileData) {
-      const profile = {
-        name: profileData.full_name || "",
-        email: profileData.email || "",
-        phone: profileData.phone || "",
-      };
-
-      setinitialFormData(profile);
-
-      // 🔥 SINCRONIZA COM formData
-      setFormData((prev) => ({
-        ...prev,
-        name: profile.name,
-        email: profile.email,
-        phone: profile.phone,
-      }));
-    }
-  };
-
-  loadProfile();
-}, [user]);
+    // 🔥 SINCRONIZA COM formData
+    setFormData((prev) => ({
+      ...prev,
+      name: profile.name,
+      email: profile.email,
+      phone: profile.phone,
+    }));
+  }
+}, [userProfile]);
 
 
 function changeMonth(increment: number) {
@@ -311,24 +267,19 @@ const selectedDay = calendarDays.find(
   
       const endTime = calculateEndTime(selectedTime, selectedService?.duration_minutes || 60);
 
-      const { error } = await supabase
-        .from('appointments')
-        .insert({
-          provider_id: provider.id,
-          client_id: user?.id || null,
-          service_id: selectedService?.id,
-          client_name: formData.name,
-          client_email: formData.email,
-          client_phone: formData.phone,
-          appointment_date: appointmentDate,
-          start_time: selectedTime,
-          end_time: endTime,
-          notes: formData.notes,
-          status: 'pending',
-        });
-      
-        console.log(error)
-      if (error) throw error;
+      await createAppointment.mutateAsync({
+        provider_id: provider.id,
+        client_id: user?.id || null,
+        service_id: selectedService?.id,
+        client_name: formData.name,
+        client_email: formData.email,
+        client_phone: formData.phone,
+        appointment_date: appointmentDate,
+        start_time: selectedTime,
+        end_time: endTime,
+        notes: formData.notes,
+        status: 'pending',
+      });
 
       setIsBooked(true);
       toast.success("Agendamento realizado com sucesso!");

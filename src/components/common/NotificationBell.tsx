@@ -30,16 +30,18 @@ type AppointmentWithMeta = Appointment & {
   isPast: boolean;
 };
 
+import { useQueryClient } from "@tanstack/react-query";
+
 export default function NotificationBell({
   todayAppointments = [],
   providerId,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [hasSeen, setHasSeen] = useState(false);
-  const [appointments, setAppointments] =
-    useState<Appointment[]>(todayAppointments);
   const [isConnected, setIsConnected] = useState(false);
   const [hasNewInsert, setHasNewInsert] = useState(false);
+  
+  const queryClient = useQueryClient();
 
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -53,28 +55,9 @@ export default function NotificationBell({
     audioRef.current?.play().catch(() => {});
   };
 
-  const fetchTodayAppointments = async () => {
-    if (!providerId) return;
-
-    const today = new Date().toISOString().split("T")[0];
-
-    const { data, error } = await supabase
-      .from('appointments')
-      .select('*, service:services(name, duration_minutes)')
-      .eq("provider_id", providerId)
-      .eq("appointment_date", today)
-      .order("start_time", { ascending: true });
-
-    if (!error && data) {
-      setAppointments(data as Appointment[]);
-    }
-  };
-
   // 🔥 Realtime
   useEffect(() => {
     if (!providerId) return;
-
-    fetchTodayAppointments();
 
     const channel = supabase
       .channel(`appointments-bell-${providerId}`)
@@ -97,7 +80,8 @@ export default function NotificationBell({
             }, 2000);
           }
 
-          fetchTodayAppointments();
+          // invalidar queries para refetch automático nos dashboards
+          queryClient.invalidateQueries({ queryKey: ["appointments", "provider", providerId] });
         }
       )
       .subscribe((status) => {
@@ -112,13 +96,7 @@ export default function NotificationBell({
         channelRef.current = null;
       }
     };
-  }, [providerId]);
-
-  useEffect(() => {
-    if (!providerId) {
-      setAppointments(todayAppointments);
-    }
-  }, [todayAppointments, providerId]);
+  }, [providerId, queryClient]);
 
   const buildDateFromTime = (time: string) => {
     const [h = "0", m = "0"] = time.split(":");
@@ -130,7 +108,7 @@ export default function NotificationBell({
   const orderedAppointments = useMemo<AppointmentWithMeta[]>(() => {
     const now = new Date();
 
-    return appointments
+    return todayAppointments
       .map((apt) => {
         const aptDate = buildDateFromTime(apt.start_time);
         return {

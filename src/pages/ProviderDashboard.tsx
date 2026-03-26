@@ -24,6 +24,10 @@ import NotificationBell from "@/components/common/NotificationBell";
 import { FinancialTab } from "@/components/provider/FinancialTab";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
+import { useProfile } from "@/hooks/useProfiles";
+import { useProviderByUserId, useUpdateProvider, useUpsertProvider } from "@/hooks/useProviders";
+import { useServicesByProvider } from "@/hooks/useServices";
+import { useAppointmentsByProvider } from "@/hooks/useAppointments";
 
 interface Appointment {
   id: string;
@@ -87,11 +91,21 @@ export default function ProviderDashboard() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("visao-geral");
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
-  const [providerProfile, setProviderProfile] = useState<ProviderProfile | null>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  
+  const { data: profile } = useProfile(user?.id);
+  const { data: providerProfile, isLoading: isProviderLoading } = useProviderByUserId(user?.id);
+  const { data: services = [], refetch: refetchServices } = useServicesByProvider(providerProfile?.id);
+  const { data: appointments = [], refetch: refetchAppointments } = useAppointmentsByProvider(providerProfile?.id);
+  
+  const updateProvider = useUpdateProvider();
+  const upsertProvider = useUpsertProvider();
+
+  const isLoading = isProviderLoading;
+  
+  const fetchData = () => {
+    refetchServices();
+    refetchAppointments();
+  };
   const today = new Date();
   const formattedDate = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
   const [cep, setCep] = useState<string>(""); 
@@ -178,22 +192,15 @@ export default function ProviderDashboard() {
   }, [user, userRole, authLoading, navigate]);
 
   useEffect(() => {
-  if (!providerProfile?.avatar_url) return;
+  if (!(providerProfile as any)?.avatar_url) return;
 
   const { data } = supabase.storage
     .from("avatar_urls")
-    .getPublicUrl(providerProfile.avatar_url);
+    .getPublicUrl((providerProfile as any).avatar_url);
 
   // evita cache antigo
   setBusinessPhoto(`${data.publicUrl}?t=${Date.now()}`);
-}, [providerProfile?.avatar_url]);
-
-
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
+}, [(providerProfile as any)?.avatar_url]);
 
   useEffect(() => {
   if (providerProfile?.business_name) {
@@ -221,7 +228,7 @@ export default function ProviderDashboard() {
     setDescription(providerProfile.description)
   }
   if(providerProfile?.working_hours){
-    setWorkingHours(providerProfile.working_hours)
+    setWorkingHours(providerProfile.working_hours as WorkingHours)
   }
 }, [providerProfile]);
 
@@ -243,23 +250,23 @@ export default function ProviderDashboard() {
     }
 
     if(!viacep){
-      const { error } = await supabase
-        .from("provider_profiles")
-        .update({
-          business_name: businessName,
-          description,
-          addressNumber,
-          working_hours: workingHours,
-          updated_at: new Date().toISOString(),
-        } as any)
-        .eq("user_id", user!.id);
-
-      if (error) {
-        toast.error("Erro ao atualizar perfil");
-        throw error;
-      }
-
-      toast.success("Perfil atualizado com sucesso");
+      updateProvider.mutate(
+        {
+          userId: user!.id,
+          data: {
+            business_name: businessName,
+            description,
+            addressNumber,
+            working_hours: workingHours,
+            updated_at: new Date().toISOString(),
+          }
+        },
+        {
+          onSuccess: () => toast.success("Perfil atualizado com sucesso"),
+          onError: () => toast.error("Erro ao atualizar perfil")
+        }
+      );
+      return;
     }
 
     const upsertData = {
@@ -277,63 +284,12 @@ export default function ProviderDashboard() {
       created_at: new Date().toISOString()
     };
 
-    const { error } = await supabase
-    .from("provider_profiles")
-    .upsert(upsertData, {
-      onConflict: "user_id",
+    upsertProvider.mutate(upsertData, {
+      onSuccess: () => toast.success("Perfil atualizado com sucesso"),
+      onError: () => toast.error("Erro ao atualizar perfil")
     });
-
-    if (error) {
-      toast.error("Erro ao atualizar perfil");
-      throw error;
-    }
-
-    toast.success("Perfil atualizado com sucesso");
   }
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      setProfile(profileData);
-
-      // Fetch provider profile
-      const { data: providerData } = await supabase
-        .from('provider_profiles')
-        .select('*')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      setProviderProfile(providerData);
-
-      if (providerData) {
-        // Fetch services (including inactive ones for management)
-        const { data: servicesData } = await supabase
-          .from('services')
-          .select('*')
-          .eq('provider_id', providerData.id)
-          .order('created_at', { ascending: false });
-        setServices(servicesData || []);
-
-        // Fetch all appointments (we'll filter client-side for future/past)
-        const { data: appointmentsData } = await supabase
-          .from('appointments')
-          .select('*, service:services(name, duration_minutes)')
-          .eq('provider_id', providerData.id)
-          .order('appointment_date', { ascending: true })
-          .order('start_time', { ascending: true });
-        setAppointments(appointmentsData || []);
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const weekOrder = [
   "Segunda",

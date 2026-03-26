@@ -56,4 +56,23 @@ export const providerRepository = {
 
     return data;
   },
+
+  async updateProviderProfile(userId: string, data: any) {
+    const { error } = await supabase
+      .from('provider_profiles')
+      .update(data)
+      .eq('user_id', userId);
+    
+    if (error) throw error;
+    return true;
+  },
+
+  async upsertProviderProfile(data: any) {
+    const { error } = await supabase
+      .from('provider_profiles')
+      .upsert(data, { onConflict: 'user_id' });
+    
+    if (error) throw error;
+    return true;
+  }
 };

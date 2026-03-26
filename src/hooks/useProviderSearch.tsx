@@ -1,5 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { providerRepository } from "@/repositories/providerRepository";
+import { serviceRepository } from "@/repositories/serviceRepository";
 
 interface Provider {
   id: string;
@@ -30,52 +32,37 @@ interface ProviderWithServices extends Provider {
 }
 
 export function useProviderSearch() {
-  const [providers, setProviders] = useState<ProviderWithServices[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedServiceType, setSelectedServiceType] = useState<string>("");
-  const [serviceTypes, setServiceTypes] = useState<string[]>([]);
 
-  useEffect(() => {
-    fetchProviders();
-  }, []);
+  const { data: rawProviders = [], isLoading: loadingProviders, refetch: refetchProviders } = useQuery({
+    queryKey: ['providers', 'all'],
+    queryFn: () => providerRepository.getAllProviders()
+  });
 
-  const fetchProviders = async () => {
-    setIsLoading(true);
-    try {
-      // Buscar profissionais
-      const { data: providersData, error: providersError } = await supabase
-        .from('provider_profiles')
-        .select('*');
+  const { data: rawServices = [], isLoading: loadingServices, refetch: refetchServices } = useQuery({
+    queryKey: ['services', 'active'],
+    queryFn: () => serviceRepository.getAllActiveServices()
+  });
 
-      if (providersError) throw providersError;
+  const isLoading = loadingProviders || loadingServices;
 
-      // Buscar serviços ativos
-      const { data: servicesData, error: servicesError } = await supabase
-        .from('services')
-        .select('*')
-        .eq('active', true);
+  const providers: ProviderWithServices[] = useMemo(() => {
+    return rawProviders.map(provider => ({
+      ...provider,
+      rating_average: (provider as unknown as any).rating_average ?? null,
+      rating_count: (provider as unknown as any).rating_count ?? null,
+      services: rawServices.filter(service => service.provider_id === provider.id) as Service[]
+    })) as ProviderWithServices[];
+  }, [rawProviders, rawServices]);
 
-      if (servicesError) throw servicesError;
+  const serviceTypes = useMemo(() => {
+    return [...new Set(rawServices.map(s => s.name))];
+  }, [rawServices]);
 
-      // Combinar profissionais com seus serviços
-      const providersWithServices: ProviderWithServices[] = (providersData || []).map(provider => ({
-        ...provider,
-        rating_average: (provider as any).rating_average ?? null,
-        rating_count: (provider as any).rating_count ?? null,
-        services: (servicesData || []).filter(service => service.provider_id === provider.id)
-      }));
-
-      setProviders(providersWithServices);
-
-      // Extrair tipos de serviço únicos
-      const uniqueServices = [...new Set((servicesData || []).map(s => s.name))];
-      setServiceTypes(uniqueServices);
-    } catch (error) {
-      console.error('Erro ao buscar profissionais:', error);
-    } finally {
-      setIsLoading(false);
-    }
+  const fetchProviders = () => {
+    refetchProviders();
+    refetchServices();
   };
 
   const filteredProviders = useMemo(() => {

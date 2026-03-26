@@ -5,9 +5,10 @@ import { Label } from "@/components/ui/label";
 import { Calendar, ArrowLeft, Loader2, User } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
+import { useProfile, useUpdateProfile } from "@/hooks/useProfiles";
+import { useProviderByUserId, useUpdateProvider } from "@/hooks/useProviders";
 
 export interface Profile {
   avatar_url: string;
@@ -23,9 +24,7 @@ export interface Profile {
 export default function Profile() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [profilerData, setProfilerData] = useState<Profile>(null);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -46,81 +45,53 @@ export default function Profile() {
     }
   }, [user, authLoading, navigate]);
 
+  const { data: profilerData, isLoading: profileLoading } = useProfile(user?.id);
+  const { data: providerProfile, isLoading: providerLoading } = useProviderByUserId(user?.id);
+  const updateProfile = useUpdateProfile();
+  const updateProvider = useUpdateProvider();
+
+  const isLoading = profileLoading || (userRole === "provider" ? providerLoading : false);
+
   useEffect(() => {
-    if (user) {
-      fetchProfile();
+    if (profilerData) {
+      setFormData({
+        fullName: profilerData.full_name || "",
+        email: profilerData.email || "",
+        phone: profilerData.phone || "",
+      });
     }
-  }, [user]);
-
-  const fetchProfile = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch user profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      setProfilerData(profileData);
-
-      if (profileData) {
-        setFormData({
-          fullName: profileData.full_name || "",
-          email: profileData.email || "",
-          phone: profileData.phone || "",
-        });
-      }
-
-      // Fetch provider profile if applicable
-      if (userRole === "provider") {
-        const { data: providerProfile } = await supabase
-          .from('provider_profiles')
-          .select('*')
-          .eq('user_id', user!.id)
-          .maybeSingle();
-
-        if (providerProfile) {
-          setProviderData({
-            businessName: providerProfile.business_name || "",
-            description: providerProfile.description || "",
-            address: providerProfile.address || "",
-            city: providerProfile.city || "",
-          });
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    } finally {
-      setIsLoading(false);
+    if (userRole === "provider" && providerProfile) {
+      setProviderData({
+        businessName: providerProfile.business_name || "",
+        description: providerProfile.description || "",
+        address: providerProfile.address || "",
+        city: providerProfile.city || "",
+      });
     }
-  };
+  }, [profilerData, providerProfile, userRole]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       // Update profile
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
+      await updateProfile.mutateAsync({
+        id: (profilerData as any)?.id as string,
+        data: {
           full_name: formData.fullName,
           phone: formData.phone,
-        })
-        .eq('user_id', user!.id);
-
-      if (profileError) throw profileError;
+        }
+      });
 
       // Update provider profile if applicable
       if (userRole === "provider") {
-        const { error: providerError } = await supabase
-          .from('provider_profiles')
-          .update({
+        await updateProvider.mutateAsync({
+          userId: user!.id,
+          data: {
             business_name: providerData.businessName,
             description: providerData.description
-          } as any)
-          .eq('user_id', user!.id);
-
-        if (providerError) throw providerError;
+          }
+        });
       }
 
       toast.success("Perfil atualizado com sucesso!");

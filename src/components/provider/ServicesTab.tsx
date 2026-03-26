@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Clock, Plus } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useCreateService, useUpdateService } from "@/hooks/useServices";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,9 @@ export function ServicesTab({ services, providerId, onServiceAdded, onServiceUpd
   const [duration, setDuration] = useState("");
   const [active, setActive] = useState(true);
 
+  const createService = useCreateService();
+  const updateService = useUpdateService();
+
   const resetForm = () => {
     setName("");
     setDescription("");
@@ -82,7 +85,7 @@ export function ServicesTab({ services, providerId, onServiceAdded, onServiceUpd
 
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.from("services").insert({
+      await createService.mutateAsync({
         provider_id: providerId,
         name: name.trim(),
         description: description.trim() || null,
@@ -90,12 +93,6 @@ export function ServicesTab({ services, providerId, onServiceAdded, onServiceUpd
         duration_minutes: parseInt(duration),
         active: active,
       });
-
-      if (error) {
-        console.error("Error adding service:", error);
-        toast.error("Erro ao adicionar serviço. Tente novamente.");
-        return;
-      }
 
       toast.success("Serviço adicionado com sucesso!");
       handleCloseModal();
@@ -118,16 +115,10 @@ export function ServicesTab({ services, providerId, onServiceAdded, onServiceUpd
   const handleToggleStatus = async (serviceId: string, currentActive: boolean) => {
     setTogglingServiceId(serviceId);
     try {
-      const { error } = await supabase
-        .from("services")
-        .update({ active: !currentActive })
-        .eq("id", serviceId);
-
-      if (error) {
-        console.error("Error toggling service status:", error);
-        toast.error("Erro ao alterar status do serviço");
-        return;
-      }
+      await updateService.mutateAsync({
+        id: serviceId,
+        data: { active: !currentActive }
+      });
 
       toast.success(
         !currentActive ? "Serviço ativado com sucesso!" : "Serviço desativado com sucesso!"

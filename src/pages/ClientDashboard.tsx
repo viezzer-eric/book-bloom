@@ -7,6 +7,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 import { ReviewModal } from "@/components/common/ReviewModal";
+import { useProfile } from "@/hooks/useProfiles";
+import { useAppointmentsByClient } from "@/hooks/useAppointments";
+import { useReviewsByClient } from "@/hooks/useReviews";
 
 interface Appointment {
   id: string;
@@ -22,15 +25,17 @@ interface Appointment {
 export default function ClientDashboard() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [profile, setProfile] = useState<Profile| null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"proximos" | "historico">("proximos");
   const [reviewModalOpen, setReviewModalOpen] = useState(false);
   const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string | null>(null);
-  const [reviewedAppointments, setReviewedAppointments] = useState<string[]>([]);
-
+  
+  const { data: profile, isLoading: profileLoading } = useProfile(user?.id);
+  const { data: appointments = [], isLoading: appointmentsLoading } = useAppointmentsByClient(user?.id);
+  const { data: reviews = [], isLoading: reviewsLoading, refetch: refetchReviews } = useReviewsByClient(user?.id);
+  
+  const reviewedAppointments = reviews.map((r: any) => r.appointment_id) || [];
+  const isLoading = profileLoading || appointmentsLoading || reviewsLoading;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -39,49 +44,6 @@ export default function ClientDashboard() {
       navigate("/painel");
     }
   }, [user, userRole, authLoading, navigate]);
-
-  useEffect(() => {
-    if (user) {
-      fetchData();
-    }
-  }, [user]);
-
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user!.id)
-        .maybeSingle();
-      setProfile(profileData);
-
-      // Buscar avaliações já feitas pelo cliente
-      const { data: reviewsData } = await supabase
-        .from("provider_reviews" as any)
-        .select("appointment_id")
-        .eq("client_id", user!.id);
-
-      setReviewedAppointments(
-        (reviewsData as any[])?.map((r: any) => r.appointment_id) || []
-      );
-
-
-      // Fetch appointments
-      const { data: appointmentsData } = await supabase
-        .from('appointments')
-        .select('*, provider:provider_profiles(business_name, id), service:services(name, duration_minutes, price)')
-        .eq('client_id', user!.id)
-        .order('appointment_date', { ascending: true })
-        .order('start_time', { ascending: true });
-      setAppointments(appointmentsData || []);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const formatDate = (date: string) => {
     return new Date(date).toLocaleDateString('pt-BR', { 
@@ -233,10 +195,7 @@ export default function ClientDashboard() {
               appointmentId={selectedAppointmentId}
               userId={user.id}
               onSuccess={() => {
-                setReviewedAppointments((prev) => [
-                  ...prev,
-                  selectedAppointmentId,
-                ]);
+                refetchReviews();
               }}
             />
           )}

@@ -5,7 +5,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { supabase } from "@/integrations/supabase/client";
+import { useAppointmentsByProvider } from "@/hooks/useAppointments";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -39,27 +39,11 @@ const MONTH_LABELS = [
 ];
 
 export function FinancialTab({ providerId }: FinancialTabProps) {
-  const [appointments, setAppointments] = useState<CompletedAppointment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: allAppointments = [], isLoading } = useAppointmentsByProvider(providerId);
 
-  useEffect(() => {
-    const fetchCompleted = async () => {
-      setIsLoading(true);
-      const { data, error } = await supabase
-        .from("appointments")
-        .select("id, appointment_date, service:services(name, price)")
-        .eq("provider_id", providerId)
-        .eq("status", "completed")
-        .order("appointment_date", { ascending: false });
-
-      if (!error && data) {
-        setAppointments(data as unknown as CompletedAppointment[]);
-      }
-      setIsLoading(false);
-    };
-
-    if (providerId) fetchCompleted();
-  }, [providerId]);
+  const appointments = allAppointments
+    .filter((apt) => apt.status === "completed")
+    .sort((a, b) => new Date(b.appointment_date).getTime() - new Date(a.appointment_date).getTime()) as unknown as CompletedAppointment[];
 
   // Aggregations
   const totalRevenue = appointments.reduce(

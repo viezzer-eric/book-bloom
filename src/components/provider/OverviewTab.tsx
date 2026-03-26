@@ -1,6 +1,6 @@
 import { Calendar, Clock, ChevronDown } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useUpdateAppointmentStatus } from "@/hooks/useAppointments";
 import { useState } from "react";
 
 interface Appointment {
@@ -22,6 +22,7 @@ interface OverviewTabProps {
 export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [localAppointments, setLocalAppointments] = useState(appointments);
+  const updateAppointmentStatus = useUpdateAppointmentStatus();
 
   const formatTime = (time: string) => time.slice(0, 5);
 
@@ -69,18 +70,13 @@ export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) 
 
     setOpenId(null);
 
-    const { error } = await supabase
-      .from("appointments")
-      .update({ status: newStatus })
-      .eq("id", id);
-
-    if (error) {
+    try {
+      await updateAppointmentStatus.mutateAsync({ id, status: newStatus });
+      toast.success("Status atualizado");
+      onStatusChange();
+    } catch (error) {
       toast.error("Erro ao atualizar status");
-      return;
     }
-
-    toast.success("Status atualizado");
-    onStatusChange();
   };
 
   const now = new Date();

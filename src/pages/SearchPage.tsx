@@ -5,10 +5,9 @@ import { SearchBar } from "@/components/search/SearchBar";
 import { ProviderList } from "@/components/search/ProviderList";
 import { useProviderSearch } from "@/hooks/useProviderSearch";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
-import { Profile } from "./Profile";
+import { useProfile } from "@/hooks/useProfiles";
 
 export default function SearchPage() {
   const { user, signOut } = useAuth();
@@ -22,7 +21,7 @@ export default function SearchPage() {
     serviceTypes,
   } = useProviderSearch();
 
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const { data: profile } = useProfile(user?.id);
   const hasFilters = searchTerm !== "" || selectedServiceType !== "";
   const [selectedSort, setSelectedSort] = useState("name_asc");
   
@@ -52,26 +51,7 @@ export default function SearchPage() {
       }
     });
 
-  const fetchData = async () => {
-      try {
-        // Fetch profile
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user!.id)
-          .maybeSingle();
-        setProfile(profileData);
-        
-      } catch (error) {
-        console.error('Error fetching data:', error);
-      }
-    };
 
-   useEffect(() => {
-      if (user) {
-        fetchData();
-      }
-    }, [user]);
 
   return (
     <div className="min-h-screen bg-background">

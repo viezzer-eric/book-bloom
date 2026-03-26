@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Star } from "lucide-react";
+import { useCreateReview } from "@/hooks/useReviews";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,31 +28,26 @@ export function ReviewModal({
 }: ReviewModalProps) {
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
-  const [loading, setLoading] = useState(false);
+  
+  const createReview = useCreateReview();
 
   const handleSubmit = async () => {
     if (rating === 0) return;
 
-    setLoading(true);
-
-    const { error } = await supabase
-      .from("provider_reviews" as any)
-      .insert({
+    try {
+      await createReview.mutateAsync({
         provider_id: providerId,
         client_id: userId,
         appointment_id: appointmentId,
         rating,
         comment: comment || null,
-      } as any);
+      });
 
-    setLoading(false);
-
-    if (!error) {
       onSuccess();
       onClose();
       setRating(0);
       setComment("");
-    } else {
+    } catch (error) {
       console.error("Erro ao salvar avaliação:", error);
     }
   };
@@ -87,10 +82,10 @@ export function ReviewModal({
 
         <Button
           onClick={handleSubmit}
-          disabled={loading || rating === 0}
+          disabled={createReview.isPending || rating === 0}
           className="w-full mt-4"
         >
-          {loading ? "Salvando..." : "Enviar Avaliação"}
+          {createReview.isPending ? "Salvando..." : "Enviar Avaliação"}
         </Button>
       </DialogContent>
     </Dialog>
