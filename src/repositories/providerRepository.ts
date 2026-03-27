@@ -48,7 +48,7 @@ export const providerRepository = {
       .from('provider_profiles')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
     if (error) {
       console.error('Erro ao buscar profissional:', error);
       throw error;

@@ -1,4 +1,4 @@
-import { Calendar, Clock } from "lucide-react";
+import { Calendar, Clock, CheckCircle2, XCircle, Clock3 } from "lucide-react";
 
 interface Appointment {
   id: string;
@@ -24,11 +24,22 @@ export function AppointmentsHistoryTab({
     const date = new Date(dateStr + "T00:00:00");
     return date.toLocaleDateString("pt-BR", {
       weekday: "short",
-      day: "numeric",
+      day: "2-digit",
       month: "short",
       year: "numeric",
     });
   };
+
+  const getStatusIcon = (status: string) => {
+    switch(status) {
+      case "confirmed": return <CheckCircle2 className="w-3.5 h-3.5" />;
+      case "pending": return <Clock3 className="w-3.5 h-3.5" />;
+      case "cancelled": return <XCircle className="w-3.5 h-3.5" />;
+      case "completed": return <CheckCircle2 className="w-3.5 h-3.5" />;
+      case "no_show": return <XCircle className="w-3.5 h-3.5" />;
+      default: return null;
+    }
+  }
 
   const getStatusLabel = (status: string) => {
     const labels: Record<string, string> = {
@@ -44,13 +55,13 @@ export function AppointmentsHistoryTab({
   const getStatusClasses = (status: string) => {
     switch (status) {
       case "completed":
-        return "bg-primary/10 text-primary";
+        return "bg-primary/10 text-primary border-primary/20";
       case "cancelled":
-        return "bg-destructive/10 text-destructive";
+        return "bg-destructive/10 text-destructive border-destructive/20";
       case "no_show":
-        return "bg-accent/10 text-accent";
+        return "bg-accent/10 text-accent border-accent/20";
       default:
-        return "bg-muted text-muted-foreground";
+        return "bg-muted text-muted-foreground border-border/50";
     }
   };
 
@@ -120,74 +131,100 @@ export function AppointmentsHistoryTab({
 
       return acc;
     }, {} as Record<string, { date: string; label: string; items: Appointment[] }>)
-  ).sort((a, b) => b.date.localeCompare(a.date)); // 🔥 garante ordem dos dias
+  ).sort((a, b) => b.date.localeCompare(a.date));
 
   // ================= UI =================
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-display font-bold text-foreground">
-          Agendamentos
-        </h1>
-        <p className="text-muted-foreground">
-          Histórico de atendimentos realizados
-        </p>
+    <div className="space-y-8 animate-fade-in">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold text-foreground">
+            Histórico de Agendamentos
+          </h1>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Atendimentos passados e concluídos
+          </p>
+        </div>
+        <div className="bg-primary/10 px-4 py-2 rounded-xl border border-primary/20 inline-flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" />
+            <span className="font-semibold text-primary">
+              {pastAppointments.length} no histórico
+            </span>
+        </div>
       </div>
 
-      <div className="space-y-5">
+      <div className="space-y-8">
         {pastAppointments.length === 0 ? (
-          <div className="text-center py-12 bg-card rounded-xl border border-border">
-            <Calendar className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-semibold text-foreground mb-2">
-              Nenhum agendamento realizado até o momento
+           <div className="text-center py-16 bg-card/40 backdrop-blur-sm rounded-3xl border border-border/60 shadow-soft">
+            <div className="w-20 h-20 bg-muted/50 rounded-full flex items-center justify-center mx-auto mb-6">
+               <Calendar className="w-10 h-10 text-muted-foreground opacity-50" />
+            </div>
+            <h3 className="text-xl font-display font-bold text-foreground mb-2">
+              Nenhum agendamento realizado
             </h3>
-            <p className="text-muted-foreground">
-              Os atendimentos concluídos aparecerão aqui.
+            <p className="text-muted-foreground max-w-sm mx-auto">
+              Os atendimentos concluídos, cancelados ou ausentes aparecerão aqui.
             </p>
           </div>
         ) : (
           groupedAppointments.map((group) => (
-            <div key={group.date} className="space-y-2">
+            <div key={group.date} className="space-y-4">
               
               {/* HEADER DO DIA */}
-              <h2 className="text-sm font-semibold text-muted-foreground px-1">
-                {group.label}
-              </h2>
+              <div className="flex items-center gap-4">
+                <h2 className="text-lg font-display font-bold text-foreground capitalize tracking-tight">
+                  {group.label}
+                </h2>
+                <div className="h-px flex-1 bg-border/40"></div>
+                <span className="text-sm font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-md">
+                  {formatDate(group.date)}
+                </span>
+              </div>
 
-              {group.items.map((apt) => (
-                <div
-                  key={apt.id}
-                  className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border"
-                >
-                  <div className="text-center min-w-[100px]">
-                    <span className="text-sm text-muted-foreground block">
-                      {formatDate(apt.appointment_date)}
-                    </span>
-                    <span className="text-base font-medium text-foreground">
-                      {formatTime(apt.start_time)} - {formatTime(apt.end_time)}
-                    </span>
-                  </div>
-
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-card-foreground">
-                      {apt.client_name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      {apt.service?.name || "Serviço"} ·{" "}
-                      {apt.service?.duration_minutes || 60} min
-                    </p>
-                  </div>
-                  <span
-                    className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusClasses(
-                      apt.status
-                    )}`}
+              <div className="grid gap-3">
+                {group.items.map((apt) => (
+                  <div
+                    key={apt.id}
+                    className="flex flex-col sm:flex-row sm:items-center gap-5 p-5 rounded-2xl bg-card border border-border/50 hover:border-border hover:bg-card/80 transition-all duration-300"
                   >
-                    {getStatusLabel(apt.status)}
-                  </span>
-                </div>
-              ))}
+                    <div className="flex items-center gap-4 sm:w-48 shrink-0">
+                      <div className="flex flex-col items-center justify-center bg-muted/30 rounded-full w-14 h-14 border border-border/30 shrink-0">
+                        <Clock className="w-5 h-5 text-muted-foreground/60 mb-0.5" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 text-foreground font-semibold">
+                          {formatTime(apt.start_time)}
+                        </div>
+                        <span className="text-sm text-muted-foreground">até {formatTime(apt.end_time)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-card-foreground truncate">
+                        {apt.client_name}
+                      </h3>
+                      <div className="flex items-center gap-3 mt-1.5 text-sm text-muted-foreground">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-secondary text-secondary-foreground font-medium">
+                          {apt.service?.name || "Serviço"}
+                        </span>
+                        <span className="flex items-center gap-1 opacity-80">
+                          <Clock3 className="w-3.5 h-3.5" />
+                          {apt.service?.duration_minutes || 60} min
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-semibold border ${getStatusClasses(
+                        apt.status
+                      )}`}
+                    >
+                      {getStatusIcon(apt.status)}
+                      {getStatusLabel(apt.status)}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))
         )}

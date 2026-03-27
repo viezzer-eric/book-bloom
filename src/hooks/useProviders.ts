@@ -16,11 +16,12 @@ export const useProviderById = (id: string | undefined | null) => {
   });
 };
 
-export const useProviderByUserId = (userId: string | undefined | null) => {
+export const useProviderByUserId = (userId: string | undefined | null, userRole?: string | null) => {
   return useQuery({
     queryKey: ['providers', 'userId', userId],
     queryFn: () => providerRepository.getProviderByUserId(userId as string),
-    enabled: !!userId,
+    enabled: !!userId && userRole === 'provider',
+    retry: false,
   });
 };
 

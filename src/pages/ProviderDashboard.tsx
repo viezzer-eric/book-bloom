@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
 
 import { Button } from "@/components/ui/button";
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  Settings, 
+import {
+  Calendar,
+  Clock,
+  Users,
+  Settings,
   Link as LinkIcon,
   User,
   LayoutDashboard,
   DollarSign,
   History,
-  Edit
+  Edit,
+  CheckCircle2
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -22,6 +23,7 @@ import { OverviewTab } from "@/components/provider/OverviewTab";
 import { AppointmentsHistoryTab } from "@/components/provider/AppointmentsHistoryTab";
 import NotificationBell from "@/components/common/NotificationBell";
 import { FinancialTab } from "@/components/provider/FinancialTab";
+import { ClientsTab } from "@/components/provider/ClientsTab";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 import { useProfile } from "@/hooks/useProfiles";
@@ -48,7 +50,7 @@ export interface ViaCepResponse {
   complemento?: string;
   bairro?: string;
   localidade?: string;
-  uf?: string;   
+  uf?: string;
   erro?: boolean;
 }
 
@@ -91,25 +93,25 @@ export default function ProviderDashboard() {
   const { user, signOut, userRole, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("visao-geral");
-  
+
   const { data: profile } = useProfile(user?.id);
-  const { data: providerProfile, isLoading: isProviderLoading } = useProviderByUserId(user?.id);
+  const { data: providerProfile, isLoading: isProviderLoading } = useProviderByUserId(user?.id, userRole);
   const { data: services = [], refetch: refetchServices } = useServicesByProvider(providerProfile?.id);
   const { data: appointments = [], refetch: refetchAppointments } = useAppointmentsByProvider(providerProfile?.id);
-  
+
   const updateProvider = useUpdateProvider();
   const upsertProvider = useUpsertProvider();
 
   const isLoading = isProviderLoading;
-  
+
   const fetchData = () => {
     refetchServices();
     refetchAppointments();
   };
   const today = new Date();
   const formattedDate = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-  const [cep, setCep] = useState<string>(""); 
-  const [viacep, setViaCep] = useState<ViaCepResponse>(); 
+  const [cep, setCep] = useState<string>("");
+  const [viacep, setViaCep] = useState<ViaCepResponse>();
   const [businessName, setBusinessName] = useState<string>("");
   const [addressNumber, setaddressNumber] = useState<string>("");
   const [description, setDescription] = useState<string>("");
@@ -119,7 +121,7 @@ export default function ProviderDashboard() {
   const [uf, setUf] = useState<string>("");
   const [businessPhoto, setBusinessPhoto] = useState<string | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  
+
   const defaultWorkingHours: WorkingHours = {
     Segunda: { open: "09:00", close: "18:00", closed: false },
     Terça: { open: "09:00", close: "18:00", closed: false },
@@ -130,7 +132,7 @@ export default function ProviderDashboard() {
     Domingo: { open: null, close: null, closed: true },
   };
 
-  
+
 
   const [workingHours, setWorkingHours] = useState<WorkingHours>(() => {
     if (!providerProfile?.working_hours) {
@@ -141,7 +143,7 @@ export default function ProviderDashboard() {
 
   async function fetchAddressByCep(cep: string) {
     const cleanCep = cep.replace(/\D/g, '');
-    
+
     if (cleanCep.length !== 8) {
       throw new Error('CEP inválido');
     }
@@ -153,7 +155,7 @@ export default function ProviderDashboard() {
     if (!response.ok) {
       throw new Error('Erro ao consultar CEP');
     }
-    
+
     const data: ViaCepResponse = await response.json();
 
     if (data.erro) {
@@ -163,11 +165,11 @@ export default function ProviderDashboard() {
   }
 
   const clearAddress = () => {
-  setViaCep({}); 
+    setViaCep({});
   };
 
   const cepMask = (value: string) => {
-    if(!value)
+    if (!value)
       clearAddress();
 
     return value.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2").slice(0, 9);
@@ -192,64 +194,64 @@ export default function ProviderDashboard() {
   }, [user, userRole, authLoading, navigate]);
 
   useEffect(() => {
-  if (!(providerProfile as any)?.avatar_url) return;
+    if (!(providerProfile as any)?.avatar_url) return;
 
-  const { data } = supabase.storage
-    .from("avatar_urls")
-    .getPublicUrl((providerProfile as any).avatar_url);
+    const { data } = supabase.storage
+      .from("avatar_urls")
+      .getPublicUrl((providerProfile as any).avatar_url);
 
-  // evita cache antigo
-  setBusinessPhoto(`${data.publicUrl}?t=${Date.now()}`);
-}, [(providerProfile as any)?.avatar_url]);
+    // evita cache antigo
+    setBusinessPhoto(`${data.publicUrl}?t=${Date.now()}`);
+  }, [(providerProfile as any)?.avatar_url]);
 
   useEffect(() => {
-  if (providerProfile?.business_name) {
-    setBusinessName(providerProfile.business_name);
-  }
-  if (providerProfile?.cep) {
-    setCep(providerProfile.cep);
-  }
-  if (providerProfile?.addressNumber) {
-    setaddressNumber(providerProfile.addressNumber);
-  }
-  if(providerProfile?.address){
-    setRua(providerProfile.address)
-  }
-  if(providerProfile?.city){
-    setCidade(providerProfile.city)
-  }
-  if(providerProfile?.state){
-    setUf(providerProfile.state)
-  }
-  if(providerProfile?.neighborhood){
-    setBairro(providerProfile.neighborhood)
-  }
-  if(providerProfile?.description){
-    setDescription(providerProfile.description)
-  }
-  if(providerProfile?.working_hours){
-    setWorkingHours(providerProfile.working_hours as WorkingHours)
-  }
-}, [providerProfile]);
+    if (providerProfile?.business_name) {
+      setBusinessName(providerProfile.business_name);
+    }
+    if (providerProfile?.cep) {
+      setCep(providerProfile.cep);
+    }
+    if (providerProfile?.addressNumber) {
+      setaddressNumber(providerProfile.addressNumber);
+    }
+    if (providerProfile?.address) {
+      setRua(providerProfile.address)
+    }
+    if (providerProfile?.city) {
+      setCidade(providerProfile.city)
+    }
+    if (providerProfile?.state) {
+      setUf(providerProfile.state)
+    }
+    if (providerProfile?.neighborhood) {
+      setBairro(providerProfile.neighborhood)
+    }
+    if (providerProfile?.description) {
+      setDescription(providerProfile.description)
+    }
+    if (providerProfile?.working_hours) {
+      setWorkingHours(providerProfile.working_hours as WorkingHours)
+    }
+  }, [providerProfile]);
 
   const updateProviderData = async () => {
-    
-    if(!cep){
+
+    if (!cep) {
       toast.error("Cep precisa estar preenchido")
       return;
     }
 
-    if(!businessName){
+    if (!businessName) {
       toast.error("Nome do empreendimento precisa estar preenchido")
       return;
     }
 
-    if(!addressNumber){
+    if (!addressNumber) {
       toast.error("Numero de Endereco precisa estar preenchido")
       return;
     }
 
-    if(!viacep){
+    if (!viacep) {
       updateProvider.mutate(
         {
           userId: user!.id,
@@ -270,7 +272,7 @@ export default function ProviderDashboard() {
     }
 
     const upsertData = {
-      user_id: user!.id, 
+      user_id: user!.id,
       business_name: businessName,
       description,
       address: viacep.logradouro,
@@ -292,14 +294,14 @@ export default function ProviderDashboard() {
 
 
   const weekOrder = [
-  "Segunda",
-  "Terça",
-  "Quarta",
-  "Quinta",
-  "Sexta",
-  "Sábado",
-  "Domingo",
-];
+    "Segunda",
+    "Terça",
+    "Quarta",
+    "Quinta",
+    "Sexta",
+    "Sábado",
+    "Domingo",
+  ];
 
   if (authLoading || isLoading) {
     return (
@@ -376,7 +378,7 @@ export default function ProviderDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <NotificationBell todayAppointments={appointments} providerId={providerProfile.id}></NotificationBell>
+              <NotificationBell todayAppointments={appointments} providerId={providerProfile?.id}></NotificationBell>
               <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
             </div>
           </div>
@@ -386,8 +388,8 @@ export default function ProviderDashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
-          <aside className="lg:w-64 flex-shrink-0">
-            <nav className="space-y-1">
+          <aside className="lg:w-64 flex-shrink-0 animate-fade-in">
+            <nav className="space-y-1.5 flex flex-col">
               {[
                 { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
                 { id: "faturamento", icon: DollarSign, label: "Faturamento" },
@@ -399,33 +401,33 @@ export default function ProviderDashboard() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left transition-all ${
-                    activeTab === item.id
-                      ? "bg-primary text-primary-foreground shadow-soft"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
+                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all font-medium ${activeTab === item.id
+                    ? "bg-primary text-primary-foreground shadow-medium shadow-primary/20 scale-[1.02]"
+                    : "text-muted-foreground hover:bg-card/60 hover:text-foreground hover:shadow-soft"
+                    }`}
                 >
                   <item.icon className="w-5 h-5" />
-                  <span className="font-medium">{item.label}</span>
+                  <span>{item.label}</span>
                 </button>
               ))}
             </nav>
             {providerProfile && (
-              <div className="mt-8 p-4 rounded-xl bg-primary/5 border border-primary/20">
-                <h4 className="font-semibold text-foreground mb-2">Seu Link de Agendamento</h4>
-                <p className="text-sm text-muted-foreground mb-3">Compartilhe com seus clientes</p>
-                <Link to={`/agendar/${providerProfile.id}`}>
-                  <Button variant="outline" size="sm" className="w-full">
+              <div className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 relative overflow-hidden group">
+                <div className="absolute -right-4 -top-4 w-20 h-20 bg-primary/20 blur-2xl rounded-full group-hover:scale-150 transition-transform"></div>
+                <h4 className="font-semibold text-foreground mb-1 relative z-10">Link de Agendamento</h4>
+                <p className="text-sm text-muted-foreground mb-4 relative z-10">Compartilhe na sua bio</p>
+                <Link to={`/agendar/${providerProfile.id}`} className="relative z-10">
+                  <Button variant="outline" size="sm" className="w-full bg-background/50 backdrop-blur-sm border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all">
                     <LinkIcon className="w-4 h-4 mr-2" />
-                    Ver Página de Agendamento
+                    Copiar Link
                   </Button>
                 </Link>
               </div>
             )}
           </aside>
-          <main className="flex-1">
+          <main className="flex-1 min-w-0">
             {activeTab === "visao-geral" && (
-              <OverviewTab appointments={appointments} onStatusChange={fetchData}/>
+              <OverviewTab appointments={appointments} onStatusChange={fetchData} />
             )}
 
             {activeTab === "faturamento" && providerProfile && (
@@ -437,8 +439,8 @@ export default function ProviderDashboard() {
             )}
 
             {activeTab === "servicos" && providerProfile && (
-              <ServicesTab 
-                services={services} 
+              <ServicesTab
+                services={services}
                 providerId={providerProfile.id}
                 onServiceAdded={fetchData}
                 onServiceUpdated={fetchData}
@@ -446,225 +448,232 @@ export default function ProviderDashboard() {
             )}
 
             {activeTab === "clientes" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-2xl font-display font-bold text-foreground">Clientes</h1>
-                    <p className="text-muted-foreground">Sua lista de clientes</p>
-                  </div>
-                </div>
-
-                <div className="text-center py-12 bg-card rounded-xl border border-border">
-                  <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="font-semibold text-foreground mb-2">Nenhum cliente ainda</h3>
-                  <p className="text-muted-foreground">Os clientes aparecerão aqui após o primeiro agendamento.</p>
-                </div>
-              </div>
+              <ClientsTab appointments={appointments} />
             )}
 
             {activeTab === "configuracoes" && (
-              <div className="space-y-6">
+              <div className="space-y-8 animate-fade-in">
                 <div>
-                  <h1 className="text-2xl font-display font-bold text-foreground">Configurações</h1>
-                  <p className="text-muted-foreground">Gerencie seu perfil de negócio</p>
+                  <h1 className="text-3xl font-display font-bold text-foreground">Configurações</h1>
+                  <p className="text-muted-foreground mt-1 text-lg">Personalize sua vitrine e horários no BookBloom</p>
                 </div>
-                <div className="space-y-6 max-w-xl">
-                  <div className="p-6 rounded-xl bg-card border border-border">
-                    <h3 className="font-semibold text-card-foreground mb-4">Informações do Negócio</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="relative w-28 h-28 rounded-full bg-muted flex items-center justify-center overflow-hidden cursor-pointer group">
-                          {/* INPUT escondido */}
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-sm border border-border/60 shadow-soft">
+                    <h3 className="text-xl font-display font-bold text-foreground mb-6 flex items-center gap-2">
+                      <User className="w-5 h-5 text-primary" />
+                      Perfil do Negócio
+                    </h3>
+                    
+                    <div className="space-y-6">
+                      <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-8 pb-8 border-b border-border/40">
+                        <label className="relative w-28 h-28 rounded-2xl bg-muted/50 border border-border flex items-center justify-center overflow-hidden cursor-pointer group shadow-sm hover:shadow-medium transition-all">
                           <input
                             type="file"
                             accept="image/*"
                             className="hidden"
                             onChange={handleBusinessPhoto}
                           />
-
-                          {/* FOTO */}
                           {businessPhoto ? (
                             <img
                               src={businessPhoto}
                               alt="Foto do negócio"
-                              className="w-full h-full object-cover rounded-full"
+                              className="w-full h-full object-cover rounded-2xl"
                             />
                           ) : (
-                            <User className="w-10 h-10 text-muted-foreground" />
+                            <User className="w-10 h-10 text-muted-foreground/50" />
                           )}
-
-                          {/* OVERLAY COM LÁPIS */}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center rounded-full">
-                            <Edit className="w-5 h-5 text-white" />
+                          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <Edit className="w-6 h-6 text-white" />
                           </div>
-
-                          {/* LOADING */}
                           {uploadingPhoto && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-full">
-                              <span className="text-white text-xs">Enviando...</span>
+                            <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center">
+                              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin mb-1"></div>
+                              <span className="text-foreground text-[10px] font-bold">Enviando</span>
                             </div>
                           )}
                         </label>
-                        <span className="text-xs text-muted-foreground">
-                          Foto do negócio
-                        </span>
+                        <div className="text-center sm:text-left pt-2">
+                           <h4 className="font-semibold text-foreground">Logotipo ou Foto</h4>
+                           <p className="text-sm text-muted-foreground max-w-[200px] mt-1">Recomendamos uma imagem quadrada (1:1) com boa resolução.</p>
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Nome do Negócio<span className="text-red-500">*</span></label>
-                        <input 
-                          type="text" 
-                          value={businessName}
-                          onChange={e => setBusinessName(e.target.value)}
-                          placeholder="Nome da sua Empresa"
-                          className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">CEP<span className="text-red-500">*</span></label>
-                        <input 
-                          type="text" 
-                          inputMode="numeric"
-                          value={cep} 
-                          onChange={e => setCep(cepMask(e.target.value))}
-                          onBlur={() => fetchAddressByCep(cep)}
-                          placeholder="00000-000"
-                          className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <div className="flex-1">
-                          <label className="block text-sm font-medium text-muted-foreground mb-1">
-                            Endereço
-                          </label>
+
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-foreground">Nome do Negócio <span className="text-destructive">*</span></label>
                           <input
-                            disabled
                             type="text"
-                            value={rua}
-                            className="px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full"
+                            value={businessName}
+                            onChange={e => setBusinessName(e.target.value)}
+                            placeholder="Nome da sua Empresa"
+                            className="w-full h-12 px-4 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                           />
                         </div>
-                        <div className="w-28">
-                          <label className="block text-sm font-medium text-muted-foreground mb-1">
-                            número<span className="text-red-500">*</span>
-                          </label>
-                          <input
-                            type="text" 
-                            inputMode="numeric"
-                            value={addressNumber}
-                            onChange={e => setaddressNumber(e.target.value)}
-                            className="px-2 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-full"
+                        
+                        <div className="space-y-2">
+                          <label className="text-sm font-semibold text-foreground">Descrição Curta</label>
+                          <textarea
+                            rows={3}
+                            value={description}
+                            onChange={e => setDescription(e.target.value)}
+                            className="w-full p-4 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all resize-none"
+                            placeholder="Descreva seu negócio, especialidades e o que o torna único..."
                           />
                         </div>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Cidade</label>
-                        <input 
-                          disabled
-                          type="text" 
-                          value={cidade}
-                          className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Estado</label>
-                        <input 
-                          disabled
-                          type="text" 
-                          value={uf}
-                          className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Bairro</label>
-                        <input
-                          disabled
-                          type="text" 
-                          value={bairro}
-                          className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-muted-foreground mb-1">Descrição</label>
-                        <textarea 
-                          rows={3}
-                          value={description}
-                          onChange={e => setDescription(e.target.value)}
-                          className="w-full px-4 py-2 rounded-lg border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-                          placeholder="Descreva seu negócio..."
-                        />
+
+                        <div className="pt-4 border-t border-border/40 space-y-4">
+                           <h4 className="font-semibold text-foreground flex items-center gap-2">Endereço</h4>
+                           <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">CEP <span className="text-destructive">*</span></label>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={cep}
+                                  onChange={e => setCep(cepMask(e.target.value))}
+                                  onBlur={() => fetchAddressByCep(cep)}
+                                  placeholder="00000-000"
+                                  className="w-full h-11 px-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/30 transition-all"
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-sm font-medium text-muted-foreground">Número <span className="text-destructive">*</span></label>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={addressNumber}
+                                  onChange={e => setaddressNumber(e.target.value)}
+                                  placeholder="123"
+                                  className="w-full h-11 px-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/30 transition-all"
+                                />
+                              </div>
+                           </div>
+
+                           <div className="space-y-2">
+                             <label className="text-sm font-medium text-muted-foreground">Rua/Logradouro</label>
+                             <input
+                               disabled
+                               type="text"
+                               value={rua}
+                               className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
+                               placeholder="Rua..."
+                             />
+                           </div>
+
+                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                             <div className="space-y-2 sm:col-span-2">
+                               <label className="text-sm font-medium text-muted-foreground">Cidade</label>
+                               <input
+                                 disabled
+                                 type="text"
+                                 value={cidade}
+                                 className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
+                                 placeholder="Cidade"
+                               />
+                             </div>
+                             <div className="space-y-2">
+                               <label className="text-sm font-medium text-muted-foreground">UF</label>
+                               <input
+                                 disabled
+                                 type="text"
+                                 value={uf}
+                                 className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
+                                 placeholder="UF"
+                               />
+                             </div>
+                           </div>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="p-6 rounded-xl bg-card border border-border">
-                    <h3 className="font-semibold text-card-foreground mb-4">
-                      Horário de Funcionamento
-                    </h3>
-                    <div className="space-y-3">
-                      {weekOrder.map((day) => {
-                        const data = workingHours[day];
-                        if (!data) return null;
 
-                        return (
-                          <div key={day} className="flex items-center gap-4">
-                            <span className="w-24 text-muted-foreground">{day}</span>
+                  {/* Horários */}
+                  <div className="flex flex-col gap-6">
+                    <div className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-sm border border-border/60 shadow-soft flex-1">
+                      <h3 className="text-xl font-display font-bold text-foreground mb-6 flex items-center gap-2">
+                        <Clock className="w-5 h-5 text-accent" />
+                        Horário de Atendimento
+                      </h3>
+                      <div className="space-y-1">
+                        {weekOrder.map((day) => {
+                          const data = workingHours[day];
+                          if (!data) return null;
 
-                            {!data.closed && (
-                              <>
-                                <input
-                                  type="time"
-                                  value={data.open ?? ""}
-                                  onChange={(e) =>
-                                    setWorkingHours((prev) => ({
-                                      ...prev,
-                                      [day]: { ...prev[day], open: e.target.value },
-                                    }))
-                                  }
-                                  className="px-2 py-1 rounded-md border border-input bg-background"
-                                />
+                          return (
+                            <div key={day} className={`flex items-center gap-4 py-3 border-b border-border/40 last:border-0 transition-opacity ${data.closed ? 'opacity-60' : 'opacity-100'}`}>
+                              <span className="w-24 font-medium text-foreground">{day}</span>
 
-                                <span className="text-muted-foreground">–</span>
+                              <div className="flex-1 flex items-center gap-2 sm:gap-4">
+                                {!data.closed ? (
+                                  <>
+                                    <input
+                                      type="time"
+                                      value={data.open ?? ""}
+                                      onChange={(e) =>
+                                        setWorkingHours((prev) => ({
+                                          ...prev,
+                                          [day]: { ...prev[day], open: e.target.value },
+                                        }))
+                                      }
+                                      className="px-2 py-1.5 rounded-md border border-input bg-background w-24 text-sm font-semibold focus:ring-1 focus:ring-primary outline-none"
+                                    />
+                                    <span className="text-muted-foreground font-medium text-xs">às</span>
+                                    <input
+                                      type="time"
+                                      value={data.close ?? ""}
+                                      onChange={(e) =>
+                                        setWorkingHours((prev) => ({
+                                          ...prev,
+                                          [day]: { ...prev[day], close: e.target.value },
+                                        }))
+                                      }
+                                      className="px-2 py-1.5 rounded-md border border-input bg-background w-24 text-sm font-semibold focus:ring-1 focus:ring-primary outline-none"
+                                    />
+                                  </>
+                                ) : (
+                                  <div className="flex-1 px-4 py-1.5 rounded-md bg-muted/40 text-muted-foreground text-sm font-medium italic">
+                                    Fechado
+                                  </div>
+                                )}
+                              </div>
 
-                                <input
-                                  type="time"
-                                  value={data.close ?? ""}
-                                  onChange={(e) =>
-                                    setWorkingHours((prev) => ({
-                                      ...prev,
-                                      [day]: { ...prev[day], close: e.target.value },
-                                    }))
-                                  }
-                                  className="px-2 py-1 rounded-md border border-input bg-background"
-                                />
-                              </>
-                            )}
-
-                            {data.closed && (
-                              <span className="text-muted-foreground">Fechado</span>
-                            )}
-
-                            <label className="ml-auto flex items-center gap-2 text-sm">
-                              <input
-                                type="checkbox"
-                                checked={data.closed}
-                                onChange={(e) =>
-                                  setWorkingHours((prev) => ({
-                                    ...prev,
-                                    [day]: {
-                                      open: e.target.checked ? null : "09:00",
-                                      close: e.target.checked ? null : "18:00",
-                                      closed: e.target.checked,
-                                    },
-                                  }))
-                                }
-                              />
-                              Fechado
-                            </label>
-                          </div>
-                        );
-                      })}
+                              <label className="flex items-center gap-2 cursor-pointer group">
+                                <div className={`w-10 h-5 rounded-full relative transition-colors ${data.closed ? 'bg-muted-foreground/30' : 'bg-green-500/20'}`}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!data.closed}
+                                    className="sr-only"
+                                    onChange={(e) =>
+                                      setWorkingHours((prev) => ({
+                                        ...prev,
+                                        [day]: {
+                                          open: e.target.checked ? "09:00" : null,
+                                          close: e.target.checked ? "18:00" : null,
+                                          closed: !e.target.checked,
+                                        },
+                                      }))
+                                    }
+                                  />
+                                   <div className={`absolute top-0.5 bottom-0.5 w-4 rounded-full transition-all ${!data.closed ? 'bg-green-500 left-5' : 'bg-muted-foreground left-1'}`}></div>
+                                </div>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    <div className="sticky bottom-6">
+                       <Button 
+                         onClick={() => updateProviderData()} 
+                         className="w-full h-14 text-lg rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:brightness-110 shadow-lg shadow-primary/20 transition-all font-bold text-primary-foreground flex items-center justify-center gap-2"
+                       >
+                         <CheckCircle2 className="w-5 h-5" />
+                         Salvar Todas as Configurações
+                       </Button>
                     </div>
                   </div>
-                  <Button onClick={() => updateProviderData()}>Salvar Alterações</Button>
                 </div>
               </div>
             )}

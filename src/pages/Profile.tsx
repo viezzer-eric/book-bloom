@@ -46,7 +46,7 @@ export default function Profile() {
   }, [user, authLoading, navigate]);
 
   const { data: profilerData, isLoading: profileLoading } = useProfile(user?.id);
-  const { data: providerProfile, isLoading: providerLoading } = useProviderByUserId(user?.id);
+  const { data: providerProfile, isLoading: providerLoading } = useProviderByUserId(user?.id, userRole);
   const updateProfile = useUpdateProfile();
   const updateProvider = useUpdateProvider();
 

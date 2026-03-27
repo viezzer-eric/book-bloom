@@ -1,20 +1,21 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { profileRepository } from '@/repositories/profileRepository';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { profileRepository } from "@/repositories/profileRepository";
 
-export const useProfile = (id: string | undefined | null) => {
+export const useProfile = (user_id: string | undefined | null) => {
   return useQuery({
-    queryKey: ['profiles', id],
-    queryFn: () => profileRepository.getProfileById(id as string),
-    enabled: !!id,
+    queryKey: ["profiles", user_id],
+    queryFn: () => profileRepository.getProfileById(user_id as string),
+    enabled: !!user_id,
   });
 };
 
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => profileRepository.updateProfile(id, data),
+    mutationFn: ({ id, data }: { id: string; data: any }) =>
+      profileRepository.updateProfile(id, data),
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['profiles', variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["profiles", variables.id] });
     },
   });
 };

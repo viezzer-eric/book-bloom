@@ -121,7 +121,7 @@ export default function NotificationBell({
         const dateB = buildDateFromTime(b.start_time);
         return dateB.getTime() - dateA.getTime();
       });
-  }, [appointments]);
+  }, [todayAppointments]);
 
   const upcomingCount = hasSeen
     ? 0
