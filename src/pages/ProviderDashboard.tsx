@@ -12,7 +12,8 @@ import {
   DollarSign,
   History,
   Edit,
-  CheckCircle2
+  CheckCircle2,
+  Lock
 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -27,7 +28,7 @@ import { ClientsTab } from "@/components/provider/ClientsTab";
 import { Profile } from "./Profile";
 import AvatarUserMenu from "@/components/common/AvatarUpload";
 import { useProfile } from "@/hooks/useProfiles";
-import { useProviderByUserId, useUpdateProvider, useUpsertProvider } from "@/hooks/useProviders";
+import { useProviderByUserId, useUpdateProvider, useUpsertProvider, useProviderPlan } from "@/hooks/useProviders";
 import { useServicesByProvider } from "@/hooks/useServices";
 import { useAppointmentsByProvider } from "@/hooks/useAppointments";
 
@@ -98,6 +99,7 @@ export default function ProviderDashboard() {
   const { data: providerProfile, isLoading: isProviderLoading } = useProviderByUserId(user?.id, userRole);
   const { data: services = [], refetch: refetchServices } = useServicesByProvider(providerProfile?.id);
   const { data: appointments = [], refetch: refetchAppointments } = useAppointmentsByProvider(providerProfile?.id);
+  const { data: providerPlan, isLoading: isPlanLoading } = useProviderPlan(user?.id);
 
   const updateProvider = useUpdateProvider();
   const upsertProvider = useUpsertProvider();
@@ -134,34 +136,30 @@ export default function ProviderDashboard() {
 
 
 
-  const [workingHours, setWorkingHours] = useState<WorkingHours>(() => {
-    if (!providerProfile?.working_hours) {
-      return defaultWorkingHours;
-    }
-    return providerProfile.working_hours as WorkingHours;
-  });
+  const [workingHours, setWorkingHours] = useState<WorkingHours>(defaultWorkingHours);
 
-  async function fetchAddressByCep(cep: string) {
-    const cleanCep = cep.replace(/\D/g, '');
+  async function fetchAddressByCep(targetCep: string) {
+    const cleanCep = targetCep.replace(/\D/g, '');
 
     if (cleanCep.length !== 8) {
-      throw new Error('CEP inválido');
+      return;
     }
 
-    const response = await fetch(
-      `https://viacep.com.br/ws/${cleanCep}/json/`
-    );
+    try {
+      const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+      if (!response.ok) throw new Error('Erro ao consultar CEP');
 
-    if (!response.ok) {
-      throw new Error('Erro ao consultar CEP');
+      const data: ViaCepResponse = await response.json();
+      if (data.erro) toast.error("CEP não encontrado");
+
+      setViaCep(data);
+      if (data.logradouro) setRua(data.logradouro);
+      if (data.localidade) setCidade(data.localidade);
+      if (data.uf) setUf(data.uf);
+      if (data.bairro) setBairro(data.bairro);
+    } catch (error) {
+      console.error(error);
     }
-
-    const data: ViaCepResponse = await response.json();
-
-    if (data.erro) {
-      throw new Error('CEP não encontrado');
-    }
-    setViaCep(data)
   }
 
   const clearAddress = () => {
@@ -230,9 +228,24 @@ export default function ProviderDashboard() {
       setDescription(providerProfile.description)
     }
     if (providerProfile?.working_hours) {
-      setWorkingHours(providerProfile.working_hours as WorkingHours)
+      const savedHours = providerProfile.working_hours as WorkingHours;
+      // Merge with defaults to ensure all days exist and structure is correct
+      const mergedHours = { ...defaultWorkingHours };
+      Object.keys(savedHours).forEach(day => {
+        if (savedHours[day]) {
+          mergedHours[day] = { ...mergedHours[day], ...savedHours[day] };
+        }
+      });
+      setWorkingHours(mergedHours);
     }
   }, [providerProfile]);
+
+  // Auto-fetch address if we have a CEP from profile but no address yet
+  useEffect(() => {
+    if (cep && cep.replace(/\D/g, '').length === 8 && !rua && !cidade) {
+      fetchAddressByCep(cep);
+    }
+  }, [cep, rua, cidade]);
 
   const updateProviderData = async () => {
 
@@ -291,7 +304,6 @@ export default function ProviderDashboard() {
       onError: () => toast.error("Erro ao atualizar perfil")
     });
   }
-
 
   const weekOrder = [
     "Segunda",
@@ -392,7 +404,7 @@ export default function ProviderDashboard() {
             <nav className="space-y-1.5 flex flex-col">
               {[
                 { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
-                { id: "faturamento", icon: DollarSign, label: "Faturamento" },
+                { id: "faturamento", icon: DollarSign, label: "Faturamento", locked: providerPlan?.plan_type?.toLowerCase() !== 'premium' },
                 { id: "agendamentos", icon: History, label: "Agendamentos" },
                 { id: "servicos", icon: Clock, label: "Serviços" },
                 { id: "clientes", icon: Users, label: "Clientes" },
@@ -401,13 +413,18 @@ export default function ProviderDashboard() {
                 <button
                   key={item.id}
                   onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl text-left transition-all font-medium ${activeTab === item.id
+                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all font-medium ${activeTab === item.id
                     ? "bg-primary text-primary-foreground shadow-medium shadow-primary/20 scale-[1.02]"
                     : "text-muted-foreground hover:bg-card/60 hover:text-foreground hover:shadow-soft"
                     }`}
                 >
-                  <item.icon className="w-5 h-5" />
-                  <span>{item.label}</span>
+                  <div className="flex items-center gap-3">
+                    <item.icon className="w-5 h-5" />
+                    <span>{item.label}</span>
+                  </div>
+                  {item.locked && (
+                    <Lock className="w-4 h-4 opacity-70" />
+                  )}
                 </button>
               ))}
             </nav>
@@ -431,7 +448,10 @@ export default function ProviderDashboard() {
             )}
 
             {activeTab === "faturamento" && providerProfile && (
-              <FinancialTab providerId={providerProfile.id} />
+              <FinancialTab 
+                providerId={providerProfile.id} 
+                isPremium={providerPlan?.plan_type?.toLowerCase() === 'premium'} 
+              />
             )}
 
             {activeTab === "agendamentos" && (
@@ -457,14 +477,14 @@ export default function ProviderDashboard() {
                   <h1 className="text-3xl font-display font-bold text-foreground">Configurações</h1>
                   <p className="text-muted-foreground mt-1 text-lg">Personalize sua vitrine e horários no BookBloom</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-sm border border-border/60 shadow-soft">
                     <h3 className="text-xl font-display font-bold text-foreground mb-6 flex items-center gap-2">
                       <User className="w-5 h-5 text-primary" />
                       Perfil do Negócio
                     </h3>
-                    
+
                     <div className="space-y-6">
                       <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-8 pb-8 border-b border-border/40">
                         <label className="relative w-28 h-28 rounded-2xl bg-muted/50 border border-border flex items-center justify-center overflow-hidden cursor-pointer group shadow-sm hover:shadow-medium transition-all">
@@ -494,8 +514,8 @@ export default function ProviderDashboard() {
                           )}
                         </label>
                         <div className="text-center sm:text-left pt-2">
-                           <h4 className="font-semibold text-foreground">Logotipo ou Foto</h4>
-                           <p className="text-sm text-muted-foreground max-w-[200px] mt-1">Recomendamos uma imagem quadrada (1:1) com boa resolução.</p>
+                          <h4 className="font-semibold text-foreground">Logotipo ou Foto</h4>
+                          <p className="text-sm text-muted-foreground max-w-[200px] mt-1">Recomendamos uma imagem quadrada (1:1) com boa resolução.</p>
                         </div>
                       </div>
 
@@ -510,7 +530,7 @@ export default function ProviderDashboard() {
                             className="w-full h-12 px-4 rounded-xl border border-input bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all font-medium"
                           />
                         </div>
-                        
+
                         <div className="space-y-2">
                           <label className="text-sm font-semibold text-foreground">Descrição Curta</label>
                           <textarea
@@ -523,66 +543,66 @@ export default function ProviderDashboard() {
                         </div>
 
                         <div className="pt-4 border-t border-border/40 space-y-4">
-                           <h4 className="font-semibold text-foreground flex items-center gap-2">Endereço</h4>
-                           <div className="grid grid-cols-2 gap-4">
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">CEP <span className="text-destructive">*</span></label>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={cep}
-                                  onChange={e => setCep(cepMask(e.target.value))}
-                                  onBlur={() => fetchAddressByCep(cep)}
-                                  placeholder="00000-000"
-                                  className="w-full h-11 px-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/30 transition-all"
-                                />
-                              </div>
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-muted-foreground">Número <span className="text-destructive">*</span></label>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={addressNumber}
-                                  onChange={e => setaddressNumber(e.target.value)}
-                                  placeholder="123"
-                                  className="w-full h-11 px-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/30 transition-all"
-                                />
-                              </div>
-                           </div>
+                          <h4 className="font-semibold text-foreground flex items-center gap-2">Endereço</h4>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-muted-foreground">CEP <span className="text-destructive">*</span></label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={cep}
+                                onChange={e => setCep(cepMask(e.target.value))}
+                                onBlur={() => fetchAddressByCep(cep)}
+                                placeholder="00000-000"
+                                className="w-full h-11 px-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/30 transition-all"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-muted-foreground">Número <span className="text-destructive">*</span></label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={addressNumber}
+                                onChange={e => setaddressNumber(e.target.value)}
+                                placeholder="123"
+                                className="w-full h-11 px-3 rounded-lg border border-input bg-background focus:ring-2 focus:ring-primary/30 transition-all"
+                              />
+                            </div>
+                          </div>
 
-                           <div className="space-y-2">
-                             <label className="text-sm font-medium text-muted-foreground">Rua/Logradouro</label>
-                             <input
-                               disabled
-                               type="text"
-                               value={rua}
-                               className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
-                               placeholder="Rua..."
-                             />
-                           </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-muted-foreground">Rua/Logradouro</label>
+                            <input
+                              disabled
+                              type="text"
+                              value={rua}
+                              className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
+                              placeholder="Rua..."
+                            />
+                          </div>
 
-                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                             <div className="space-y-2 sm:col-span-2">
-                               <label className="text-sm font-medium text-muted-foreground">Cidade</label>
-                               <input
-                                 disabled
-                                 type="text"
-                                 value={cidade}
-                                 className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
-                                 placeholder="Cidade"
-                               />
-                             </div>
-                             <div className="space-y-2">
-                               <label className="text-sm font-medium text-muted-foreground">UF</label>
-                               <input
-                                 disabled
-                                 type="text"
-                                 value={uf}
-                                 className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
-                                 placeholder="UF"
-                               />
-                             </div>
-                           </div>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            <div className="space-y-2 sm:col-span-2">
+                              <label className="text-sm font-medium text-muted-foreground">Cidade</label>
+                              <input
+                                disabled
+                                type="text"
+                                value={cidade}
+                                className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
+                                placeholder="Cidade"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-muted-foreground">UF</label>
+                              <input
+                                disabled
+                                type="text"
+                                value={uf}
+                                className="w-full h-11 px-3 rounded-lg border border-transparent bg-muted/40 text-muted-foreground cursor-not-allowed"
+                                placeholder="UF"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -655,7 +675,7 @@ export default function ProviderDashboard() {
                                       }))
                                     }
                                   />
-                                   <div className={`absolute top-0.5 bottom-0.5 w-4 rounded-full transition-all ${!data.closed ? 'bg-green-500 left-5' : 'bg-muted-foreground left-1'}`}></div>
+                                  <div className={`absolute top-0.5 bottom-0.5 w-4 rounded-full transition-all ${!data.closed ? 'bg-green-500 left-5' : 'bg-muted-foreground left-1'}`}></div>
                                 </div>
                               </label>
                             </div>
@@ -663,15 +683,68 @@ export default function ProviderDashboard() {
                         })}
                       </div>
                     </div>
-                    
+
+                    {/* Plano e Assinatura */}
+                    <div className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-sm border border-border/60 shadow-soft">
+                      <h3 className="text-xl font-display font-bold text-foreground mb-6 flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-green-500" />
+                        Plano e Assinatura
+                      </h3>
+                      <div className="space-y-4">
+                        {isPlanLoading ? (
+                          <div className="flex items-center justify-center p-8">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="text-sm font-medium text-muted-foreground">Status da Assinatura</p>
+                                  <p className="text-lg font-bold text-foreground capitalize">
+                                    {(providerPlan?.status?.toLowerCase() === "active" ? "Ativo" : providerPlan?.status) || "Nenhum plano encontrado"}
+                                  </p>
+                                </div>
+                                {providerPlan && (
+                                  <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
+                                    providerPlan.plan_type?.toLowerCase() === 'premium' 
+                                    ? "animate-foil shadow-foil text-white" 
+                                    : "bg-primary/10 text-primary border border-primary/20"
+                                  }`}>
+                                    {providerPlan.plan_type}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {providerPlan?.expires_at && (
+                              <div className="flex items-center gap-3 px-1">
+                                <Calendar className="w-5 h-5 text-primary" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Expira em</p>
+                                  <p className="text-base font-semibold text-foreground">
+                                    {new Date(providerPlan.expires_at).toLocaleDateString('pt-BR', {
+                                      day: '2-digit',
+                                      month: 'long',
+                                      year: 'numeric'
+                                    })}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="sticky bottom-6">
-                       <Button 
-                         onClick={() => updateProviderData()} 
-                         className="w-full h-14 text-lg rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:brightness-110 shadow-lg shadow-primary/20 transition-all font-bold text-primary-foreground flex items-center justify-center gap-2"
-                       >
-                         <CheckCircle2 className="w-5 h-5" />
-                         Salvar Todas as Configurações
-                       </Button>
+                      <Button
+                        onClick={() => updateProviderData()}
+                        className="w-full h-14 text-lg rounded-2xl bg-gradient-to-r from-primary to-primary/80 hover:brightness-110 shadow-lg shadow-primary/20 transition-all font-bold text-primary-foreground flex items-center justify-center gap-2"
+                      >
+                        <CheckCircle2 className="w-5 h-5" />
+                        Salvar Todas as Configurações
+                      </Button>
                     </div>
                   </div>
                 </div>

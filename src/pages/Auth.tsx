@@ -2,16 +2,13 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar, Eye, EyeOff, Loader2, MessageCircle, ArrowRight, Star, Scissors, Heart, Dumbbell, Sparkles, Brain, TrendingUp, Bell, DollarSign, UserCheck, ArrowLeft, CheckCheck } from "lucide-react";
+import { Calendar, Eye, EyeOff, Loader2, MessageCircle, ArrowRight, Star, Scissors, Heart, Dumbbell, Sparkles, Brain, TrendingUp, Bell, DollarSign, UserCheck, ArrowLeft, CheckCheck, Copy, Check } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 import { motion, useMotionValue, useSpring, useTransform, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-
-const WHATSAPP_MESSAGE = encodeURIComponent(
-  "Olá! Tenho interesse em me cadastrar como prestador de serviço na plataforma Bookly"
-);
 
 const APPOINTMENT_CASES = [
   { icon: Scissors, label: "Barba & Cabelo", time: "Amanhã às 14h", color: "text-blue-400" },
@@ -60,6 +57,80 @@ const PLANS = [
   },
 ];
 
+const isValidCPF = (cpf: string) => {
+  cpf = cpf.replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  let sum = 0, rest;
+  for (let i = 1; i <= 9; i++) sum = sum + parseInt(cpf.substring(i - 1, i)) * (11 - i);
+  rest = (sum * 10) % 11;
+  if ((rest === 10) || (rest === 11)) rest = 0;
+  if (rest !== parseInt(cpf.substring(9, 10))) return false;
+  sum = 0;
+  for (let i = 1; i <= 10; i++) sum = sum + parseInt(cpf.substring(i - 1, i)) * (12 - i);
+  rest = (sum * 10) % 11;
+  if ((rest === 10) || (rest === 11)) rest = 0;
+  if (rest !== parseInt(cpf.substring(10, 11))) return false;
+  return true;
+};
+
+const isValidCNPJ = (cnpj: string) => {
+  cnpj = cnpj.replace(/\D/g, '');
+  if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false;
+  let size = cnpj.length - 2;
+  let numbers = cnpj.substring(0, size);
+  let digits = cnpj.substring(size);
+  let sum = 0;
+  let pos = size - 7;
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  let result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+  if (result !== parseInt(digits.charAt(0))) return false;
+  size = size + 1;
+  numbers = cnpj.substring(0, size);
+  sum = 0;
+  pos = size - 7;
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  result = sum % 11 < 2 ? 0 : 11 - sum % 11;
+  if (result !== parseInt(digits.charAt(1))) return false;
+  return true;
+};
+
+const formatCPF = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  return digits
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+};
+
+const formatCNPJ = (value: string) => {
+  const digits = value.replace(/\D/g, "").slice(0, 14);
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+};
+
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, "");
+  if (digits.length <= 10) {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
+  } else {
+    return digits
+      .replace(/(\d{2})(\d)/, "($1) $2")
+      .replace(/(\d{5})(\d{1,4})$/, "$1-$2")
+      .slice(0, 15);
+  }
+};
+
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const isRegister = searchParams.get("mode") === "register";
@@ -73,12 +144,96 @@ export default function Auth() {
   const [step, setStep] = useState(1);
   const [selectedPlan, setSelectedPlan] = useState("free");
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annually">("monthly");
-
+  const [externalId, setExternalId] = useState<string>("");
+  const [paymentStatus, setPaymentStatus] = useState<"PendingCheckout" | "Active">("PendingCheckout");
+  const [documentType, setDocumentType] = useState<"cpf" | "cnpj">("cpf");
+  const [pixModalOpen, setPixModalOpen] = useState(false);
+  const [pixData, setPixData] = useState<any>(null);
+  const [copied, setCopied] = useState(false);
   const activeCases = (mode === "register" && role === "provider") ? PROVIDER_CASES : APPOINTMENT_CASES;
 
   useEffect(() => {
     setCaseIdx(0);
   }, [mode, role]);
+
+  useEffect(() => {
+    // Só inicia o polling se o modal estiver aberto, tivermos o ID e não estiver ativo ainda
+    if (!pixModalOpen || !externalId || paymentStatus === "Active") return;
+
+    console.log("Iniciando polling de 15s para ID:", externalId);
+
+    const checkStatusInterno = async () => {
+      try {
+        const response = await fetch(
+          `https://angelic-nonfeverish-heather.ngrok-free.dev/v1/abacatePay/payment-status?paymentId=${externalId}`,
+          {
+            method: "GET",
+            headers: {
+              "ngrok-skip-browser-warning": "true",
+            },
+          }
+        );
+
+        if (response.ok) {
+          // Usamos .text() porque a API retorna uma string pura, não um JSON
+          const statusTexto = await response.text();
+
+          // Remove aspas extras que o C# às vezes coloca ao serializar strings puras
+          const statusLimpo = statusTexto.replace(/"/g, "");
+
+          console.log("Status puro recebido:", statusLimpo);
+
+          if (statusLimpo === "Active" || statusLimpo === "Paid") {
+            handlePaymentSuccess();
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao ler resposta da API:", err);
+      }
+    };
+
+    // 1. Executa uma vez imediatamente ao abrir o modal
+    checkStatusInterno();
+
+    // 2. Define o intervalo para repetir a cada 15 segundos
+    const intervalId = setInterval(checkStatusInterno, 15000);
+
+    // 3. CLEANUP: Limpa o intervalo se o modal fechar ou o componente desmontar
+    return () => {
+      console.log("Limpando polling...");
+      clearInterval(intervalId);
+    };
+  }, [pixModalOpen, externalId, paymentStatus]);
+
+  const handlePaymentSuccess = async () => {
+    const { email, password } = formData;
+    setPaymentStatus("Active");
+    toast.success("Pagamento confirmado com sucesso!");
+
+    // Limpar formulário
+    setFormData({
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      document: "",
+      phone: "",
+    });
+
+    // Redirecionamento automático após 2 segundos
+    setTimeout(async () => {
+      try {
+        setIsLoading(true);
+        await signIn(email, password);
+        navigate("/painel");
+      } catch (error) {
+        navigate("/login");
+      } finally {
+        setIsLoading(false);
+        setPixModalOpen(false);
+      }
+    }, 2000);
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -110,7 +265,11 @@ export default function Auth() {
     email: "",
     password: "",
     confirmPassword: "",
+    document: "",
+    phone: "",
   });
+
+
 
   const { signUp, signIn } = useAuth();
   const navigate = useNavigate();
@@ -124,6 +283,20 @@ export default function Auth() {
     e.preventDefault();
 
     if (mode === "register" && step === 1) {
+      if (role === "provider") {
+        if (documentType === "cpf" && !isValidCPF(formData.document)) {
+          toast.error("CPF inválido");
+          return;
+        }
+        if (documentType === "cnpj" && !isValidCNPJ(formData.document)) {
+          toast.error("CNPJ inválido");
+          return;
+        }
+        if (formData.phone.replace(/\D/g, "").length < 10) {
+          toast.error("Telefone inválido");
+          return;
+        }
+      }
       if (formData.password !== formData.confirmPassword) {
         toast.error("As senhas não coincidem");
         return;
@@ -140,19 +313,34 @@ export default function Auth() {
 
     try {
       if (mode === "register") {
-        const { error } = await signUp(formData.email, formData.password, formData.fullName, role);
+        let planAmount = 0;
+        if (role === "provider" && selectedPlan !== "free") {
+          const plan = PLANS.find((p) => p.id === selectedPlan);
+          if (plan) {
+            const monthlyPrice = parseInt(plan.price.replace("R$ ", ""));
+            planAmount = billingCycle === "monthly" ? monthlyPrice : Math.floor(monthlyPrice * 12 * 0.84);
+          }
+        }
+
+        const { error, data } = await signUp(formData.email, formData.password, formData.fullName, role, formData.phone, formData.document, planAmount);
 
         if (error) {
           toast.error(error.message || "Erro ao criar conta");
         } else {
           toast.success("Conta criada com sucesso!");
-          navigate(role === "provider" ? "/painel" : "/meus-agendamentos");
+          if (role === "provider" && data) {
+            setPixData(data);
+            setPixModalOpen(true);
+            setExternalId(data.id);
+          } else {
+            navigate(role === "provider" ? "/painel" : "/meus-agendamentos");
+          }
         }
       } else {
         const { error } = await signIn(formData.email, formData.password);
 
         if (error) {
-          toast.error("Email ou senha incorretos");
+          toast.error(error.message || "Email ou senha incorretos");
         } else {
           toast.success("Login realizado com sucesso!");
           navigate("/painel");
@@ -339,6 +527,71 @@ export default function Auth() {
           required
         />
       </motion.div>
+
+      {role === "provider" && (
+        <>
+          <motion.div variants={itemVariants} className="space-y-2">
+            <div className="flex justify-between items-center ml-1 mb-1">
+              <Label htmlFor="document" className="text-sm font-medium">Documento</Label>
+              <div className="flex bg-white/50 dark:bg-card/50 p-1 rounded-lg border border-white/20">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocumentType("cpf");
+                    setFormData({ ...formData, document: "" });
+                  }}
+                  className={cn(
+                    "px-3 py-1 text-xs font-semibold rounded-md transition-colors",
+                    documentType === "cpf" ? "bg-white dark:bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  CPF
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDocumentType("cnpj");
+                    setFormData({ ...formData, document: "" });
+                  }}
+                  className={cn(
+                    "px-3 py-1 text-xs font-semibold rounded-md transition-colors",
+                    documentType === "cnpj" ? "bg-white dark:bg-card text-primary shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  CNPJ
+                </button>
+              </div>
+            </div>
+            <Input
+              id="document"
+              type="text"
+              placeholder={documentType === "cpf" ? "000.000.000-00" : "00.000.000/0000-00"}
+              className="h-12 bg-white/50 backdrop-blur-sm border-white/20 rounded-xl focus:ring-primary/20 transition-all"
+              value={formData.document}
+              onChange={(e) => {
+                const formatted = documentType === "cpf"
+                  ? formatCPF(e.target.value)
+                  : formatCNPJ(e.target.value);
+                setFormData({ ...formData, document: formatted });
+              }}
+              required
+            />
+          </motion.div>
+
+          <motion.div variants={itemVariants} className="space-y-2">
+            <Label htmlFor="phone" className="text-sm font-medium ml-1">Telefone</Label>
+            <Input
+              id="phone"
+              type="tel"
+              placeholder="(00) 00000-0000"
+              className="h-12 bg-white/50 backdrop-blur-sm border-white/20 rounded-xl focus:ring-primary/20 transition-all"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
+              required
+            />
+          </motion.div>
+        </>
+      )}
 
       <motion.div variants={itemVariants} className="space-y-2">
         <Label htmlFor="password" className="text-sm font-medium ml-1">Senha</Label>
@@ -723,6 +976,102 @@ export default function Auth() {
         <div className="absolute top-[-10%] right-[-10%] w-96 h-96 rounded-full border border-white/10" />
         <div className="absolute bottom-[-20%] left-[-20%] w-[120%] h-[120%] rounded-full border border-white/[0.03]" />
       </div>
+
+      {/* Pix Modal */}
+      <Dialog open={pixModalOpen} onOpenChange={(open) => {
+        setPixModalOpen(open);
+        if (!open) navigate("/painel");
+      }}>
+        <DialogContent className="sm:max-w-md border-white/10 bg-card/95 backdrop-blur-xl">
+          {paymentStatus === "Active" ? (
+            <div className="flex flex-col items-center justify-center py-12 space-y-4">
+              <motion.div
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                className="w-20 h-20 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20"
+              >
+                <CheckCheck className="w-12 h-12 text-white" />
+              </motion.div>
+              <h2 className="text-2xl font-bold font-display text-center">Pagamento Confirmado!</h2>
+              <p className="text-muted-foreground text-center">
+                Sua conta foi ativada com sucesso.<br />
+                Você será redirecionado para o painel em instantes...
+              </p>
+              <div className="flex items-center gap-2 text-primary font-medium">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>Preparando seu acesso...</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-display text-center">Pagamento do Plano</DialogTitle>
+                <DialogDescription className="text-center text-muted-foreground flex flex-col items-center gap-2">
+                  <span>Escaneie o QR Code abaixo com o aplicativo do seu banco para ativar sua conta de Prestador.</span>
+                  {pixData?.amount && (
+                    <span className="text-3xl font-bold text-foreground mt-2">
+                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(pixData.amount / 100)}
+                    </span>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="flex flex-col items-center space-y-6 py-4">
+                {/* Tenta buscar a imagem do QR Code em possíveis formatos de resposta */}
+                {(pixData?.brCodeBase64) ? (
+                  <div className="bg-white p-4 rounded-xl shadow-lg border">
+                    <img
+                      src={pixData?.brCodeBase64}
+                      alt="QR Code PIX"
+                      className="w-48 h-48 object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-48 h-48 bg-muted rounded-xl flex items-center justify-center border border-white/10">
+                    <span className="text-muted-foreground text-sm text-center px-4">QR Code indisponível</span>
+                  </div>
+                )}
+
+                <div className="w-full space-y-2">
+                  <Label className="text-sm font-medium ml-1">Pix Copia e Cola</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      readOnly
+                      value={pixData?.brCode}
+                      className="bg-white/50 backdrop-blur-sm border-white/20 font-mono text-xs"
+                    />
+                    <Button
+                      size="icon"
+                      onClick={() => {
+                        const code = pixData?.brCode;
+                        if (code) {
+                          navigator.clipboard.writeText(code);
+                          setCopied(true);
+                          toast.success("Código copiado!");
+                          setTimeout(() => setCopied(false), 2000);
+                        }
+                      }}
+                      className="shrink-0 transition-all hover:scale-105 active:scale-95"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-emerald-300" /> : <Copy className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => {
+                    setPixModalOpen(false);
+                    navigate("/painel");
+                  }}
+                  className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20"
+                >
+                  Já realizei o pagamento
+                </Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

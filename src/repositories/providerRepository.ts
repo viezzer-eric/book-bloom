@@ -1,14 +1,13 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export const providerRepository = {
-
   async countProviders(): Promise<number> {
     const { count, error } = await supabase
-      .from('provider_profiles')
-      .select('*', { count: 'exact', head: true });
+      .from("provider_profiles")
+      .select("*", { count: "exact", head: true });
 
     if (error) {
-      console.error('Erro ao contar profissionais:', error);
+      console.error("Erro ao contar profissionais:", error);
       throw error;
     }
 
@@ -17,11 +16,11 @@ export const providerRepository = {
 
   async getAllProviders() {
     const { data, error } = await supabase
-      .from('provider_profiles')
-      .select('*');
+      .from("provider_profiles")
+      .select("*");
 
     if (error) {
-      console.error('Erro ao buscar profissionais:', error);
+      console.error("Erro ao buscar profissionais:", error);
       throw error;
     }
 
@@ -30,13 +29,13 @@ export const providerRepository = {
 
   async getProviderById(id: string) {
     const { data, error } = await supabase
-      .from('provider_profiles')
-      .select('*')
-      .eq('id', id)
+      .from("provider_profiles")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error) {
-      console.error('Erro ao buscar profissional:', error);
+      console.error("Erro ao buscar profissional:", error);
       throw error;
     }
 
@@ -45,12 +44,12 @@ export const providerRepository = {
 
   async getProviderByUserId(userId: string) {
     const { data, error } = await supabase
-      .from('provider_profiles')
-      .select('*')
-      .eq('user_id', userId)
+      .from("provider_profiles")
+      .select("*")
+      .eq("user_id", userId)
       .maybeSingle();
     if (error) {
-      console.error('Erro ao buscar profissional:', error);
+      console.error("Erro ao buscar profissional:", error);
       throw error;
     }
 
@@ -59,20 +58,34 @@ export const providerRepository = {
 
   async updateProviderProfile(userId: string, data: any) {
     const { error } = await supabase
-      .from('provider_profiles')
+      .from("provider_profiles")
       .update(data)
-      .eq('user_id', userId);
-    
+      .eq("user_id", userId);
+
     if (error) throw error;
     return true;
   },
 
   async upsertProviderProfile(data: any) {
     const { error } = await supabase
-      .from('provider_profiles')
-      .upsert(data, { onConflict: 'user_id' });
-    
+      .from("provider_profiles")
+      .upsert(data, { onConflict: "user_id" });
+
     if (error) throw error;
     return true;
-  }
+  },
+
+  async getProviderPlan(userId: string) {
+    const { data, error } = await (supabase as any)
+      .from("provider_plan")
+      .select("*")
+      .eq("provider_id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Erro ao buscar plano no Supabase:", error);
+      throw error;
+    }
+    return data;
+  },
 };

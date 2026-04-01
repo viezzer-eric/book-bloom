@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { DollarSign, TrendingUp, Hash, BarChart3, FileText, PieChart as PieChartIcon, Calendar, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { DollarSign, TrendingUp, Hash, BarChart3, FileText, PieChart as PieChartIcon, Calendar, Lock } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -26,10 +26,8 @@ interface CompletedAppointment {
 
 interface FinancialTabProps {
   providerId: string;
+  isPremium?: boolean;
 }
-
-const formatCurrency = (value: number) =>
-  value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 const formatDate = (dateStr: string) => {
   const date = new Date(dateStr + "T00:00:00");
@@ -43,11 +41,36 @@ const MONTH_LABELS = [
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', '#EAB308', '#3B82F6', '#8B5CF6', '#EC4899'];
 
-export function FinancialTab({ providerId }: FinancialTabProps) {
+export function FinancialTab({ providerId, isPremium = false }: FinancialTabProps) {
   const { data: allAppointments = [], isLoading } = useAppointmentsByProvider(providerId);
 
   const [timeRange, setTimeRange] = useState("this_month");
   const [chartType, setChartType] = useState<"monthly" | "daily">("daily");
+
+  const formatCurrency = (value: number) => {
+    if (!isPremium) return "R$ ***,**";
+    return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  };
+
+  const formatNumber = (value: number) => {
+    if (!isPremium) return "**";
+    return value.toString();
+  };
+
+  const renderLockOverlay = (message = "Upgrade para Premium para ver detalhes") => (
+    <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/20 backdrop-blur-[4px] rounded-2xl border border-primary/20 animate-fade-in text-center p-6">
+      <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center mb-4 shadow-glow">
+        <Lock className="w-8 h-8 text-primary animate-pulse" />
+      </div>
+      <h3 className="text-xl font-display font-bold text-foreground mb-2">Área Restrita</h3>
+      <p className="text-muted-foreground max-w-[240px] text-sm font-medium">
+        {message}
+      </p>
+      <button className="mt-6 px-6 py-2 rounded-full bg-primary text-primary-foreground text-sm font-bold hover:brightness-110 transition-all shadow-lg shadow-primary/20">
+        Ver Planos
+      </button>
+    </div>
+  );
 
   const completedAppointments = useMemo(() => {
     return allAppointments
@@ -147,7 +170,7 @@ export function FinancialTab({ providerId }: FinancialTabProps) {
   }
 
   return (
-    <div className="space-y-8 animate-fade-in">
+    <div className="space-y-8 animate-fade-in text-balance">
       
       {/* Header and Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -204,7 +227,7 @@ export function FinancialTab({ providerId }: FinancialTabProps) {
               </div>
             </div>
             <p className="text-3xl font-display font-bold text-foreground tracking-tight">
-              {totalServices}
+              {formatNumber(totalServices)}
             </p>
           </CardContent>
         </Card>
@@ -235,7 +258,7 @@ export function FinancialTab({ providerId }: FinancialTabProps) {
             </div>
             <div className="flex flex-col">
               <p className="text-lg font-display font-bold text-foreground truncate" title={topService?.name || "Nenhum"}>
-                {topService?.name || "N/A"}
+                {isPremium ? (topService?.name || "N/A") : "******"}
               </p>
               {topService && (
                 <span className="text-sm font-medium text-green-500 mt-1">
@@ -274,60 +297,63 @@ export function FinancialTab({ providerId }: FinancialTabProps) {
               </button>
             </div>
           </CardHeader>
-          <CardContent className="p-6">
-            {timeSeriesData.length > 0 ? (
-              <div className="h-[320px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={timeSeriesData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="colorFaturamento" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
-                    <XAxis 
-                      dataKey="label" 
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      dy={10}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                      tickFormatter={(v) => `R$ ${v}`}
-                      dx={-10}
-                    />
-                    <Tooltip
-                      cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--card))",
-                        borderColor: "hsl(var(--border))",
-                        borderRadius: "12px",
-                        boxShadow: "var(--shadow-medium)",
-                        color: "hsl(var(--foreground))"
-                      }}
-                      formatter={(val: number) => [formatCurrency(val), "Faturamento"]}
-                      labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '8px' }}
-                    />
-                    <Bar
-                      dataKey="Faturamento"
-                      fill="url(#colorFaturamento)"
-                      radius={[6, 6, 0, 0]}
-                      maxBarSize={50}
-                      animationDuration={1500}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            ) : (
-                <div className="h-[320px] flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
-                  <BarChart3 className="w-12 h-12 mb-4 opacity-20" />
-                  <p>Não há dados suficientes para gerar o gráfico neste período.</p>
+          <CardContent className="p-6 relative min-h-[320px]">
+            {!isPremium && renderLockOverlay("Evolução detalhada disponível no Premium")}
+            <div className={!isPremium ? "blur-md pointer-events-none select-none opacity-50 transition-all duration-500" : "transition-all duration-500"}>
+              {timeSeriesData.length > 0 ? (
+                <div className="h-[320px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={timeSeriesData} margin={{ top: 20, right: 10, left: 0, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="colorFaturamento" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                      <XAxis 
+                        dataKey="label" 
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        dy={10}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
+                        tickFormatter={(v) => `R$ ${v}`}
+                        dx={-10}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'hsl(var(--muted))', opacity: 0.4 }}
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          borderColor: "hsl(var(--border))",
+                          borderRadius: "12px",
+                          boxShadow: "var(--shadow-medium)",
+                          color: "hsl(var(--foreground))"
+                        }}
+                        formatter={(val: number) => [formatCurrency(val), "Faturamento"]}
+                        labelStyle={{ color: 'hsl(var(--muted-foreground))', marginBottom: '8px' }}
+                      />
+                      <Bar
+                        dataKey="Faturamento"
+                        fill="url(#colorFaturamento)"
+                        radius={[6, 6, 0, 0]}
+                        maxBarSize={50}
+                        animationDuration={1500}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
                 </div>
-            )}
+              ) : (
+                  <div className="h-[320px] flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
+                    <BarChart3 className="w-12 h-12 mb-4 opacity-20" />
+                    <p>Não há dados suficientes para gerar o gráfico neste período.</p>
+                  </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
@@ -339,50 +365,53 @@ export function FinancialTab({ providerId }: FinancialTabProps) {
               Receita por Serviço
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            {revenueByService.length > 0 ? (
-               <div className="h-[320px] w-full flex flex-col items-center justify-center">
-                 <ResponsiveContainer width="100%" height="100%">
-                   <PieChart>
-                     <Tooltip 
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--card))",
-                          borderColor: "hsl(var(--border))",
-                          borderRadius: "12px",
-                          boxShadow: "var(--shadow-medium)",
-                          color: "hsl(var(--foreground))"
-                        }}
-                        formatter={(value: number) => formatCurrency(value)}
-                     />
-                     <Pie
-                       data={revenueByService}
-                       cx="50%"
-                       cy="45%"
-                       innerRadius={70}
-                       outerRadius={95}
-                       paddingAngle={5}
-                       dataKey="value"
-                       animationDuration={1500}
-                     >
-                       {revenueByService.map((entry, index) => (
-                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                       ))}
-                     </Pie>
-                     <Legend 
-                        layout="horizontal" 
-                        verticalAlign="bottom" 
-                        align="center"
-                        wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }}
-                      />
-                   </PieChart>
-                 </ResponsiveContainer>
-               </div>
-            ) : (
-               <div className="h-[320px] flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
-                  <PieChartIcon className="w-12 h-12 mb-4 opacity-20" />
-                  <p>Não há serviços concluídos neste período.</p>
-                </div>
-            )}
+          <CardContent className="p-6 relative min-h-[320px]">
+            {!isPremium && renderLockOverlay("Análise por serviço disponível no Premium")}
+            <div className={!isPremium ? "blur-md pointer-events-none select-none opacity-50 transition-all duration-500" : "transition-all duration-500"}>
+              {revenueByService.length > 0 ? (
+                 <div className="h-[320px] w-full flex flex-col items-center justify-center">
+                   <ResponsiveContainer width="100%" height="100%">
+                     <PieChart>
+                       <Tooltip 
+                          contentStyle={{
+                            backgroundColor: "hsl(var(--card))",
+                            borderColor: "hsl(var(--border))",
+                            borderRadius: "12px",
+                            boxShadow: "var(--shadow-medium)",
+                            color: "hsl(var(--foreground))"
+                          }}
+                          formatter={(value: number) => formatCurrency(value)}
+                       />
+                       <Pie
+                         data={revenueByService}
+                         cx="50%"
+                         cy="45%"
+                         innerRadius={70}
+                         outerRadius={95}
+                         paddingAngle={5}
+                         dataKey="value"
+                         animationDuration={1500}
+                       >
+                         {revenueByService.map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                         ))}
+                       </Pie>
+                       <Legend 
+                          layout="horizontal" 
+                          verticalAlign="bottom" 
+                          align="center"
+                          wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }}
+                        />
+                     </PieChart>
+                   </ResponsiveContainer>
+                 </div>
+              ) : (
+                 <div className="h-[320px] flex flex-col items-center justify-center text-muted-foreground p-6 text-center">
+                    <PieChartIcon className="w-12 h-12 mb-4 opacity-20" />
+                    <p>Não há serviços concluídos neste período.</p>
+                  </div>
+              )}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -398,51 +427,54 @@ export function FinancialTab({ providerId }: FinancialTabProps) {
             </div>
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
-          {recentActivity.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <FileText className="w-8 h-8 text-muted-foreground opacity-60" />
+        <CardContent className="p-0 relative">
+          {!isPremium && renderLockOverlay("Histórico detalhado disponível no Premium")}
+          <div className={!isPremium ? "blur-md pointer-events-none select-none opacity-50" : ""}>
+            {recentActivity.length === 0 ? (
+              <div className="text-center py-16">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <FileText className="w-8 h-8 text-muted-foreground opacity-60" />
+                </div>
+                <h3 className="font-semibold text-foreground text-lg mb-2">
+                  Nenhum serviço concluído
+                </h3>
+                <p className="text-muted-foreground">
+                  Finalize os agendamentos para vê-los no histórico.
+                </p>
               </div>
-              <h3 className="font-semibold text-foreground text-lg mb-2">
-                Nenhum serviço concluído
-              </h3>
-              <p className="text-muted-foreground">
-                Finalize os agendamentos para vê-los no histórico.
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow className="hover:bg-transparent border-border/50">
-                    <TableHead className="pl-6 h-12">Data</TableHead>
-                    <TableHead>Serviço</TableHead>
-                    <TableHead className="text-right pr-6">Valor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentActivity.map((apt) => (
-                    <TableRow key={apt.id} className="hover:bg-muted/40 transition-colors border-border/40">
-                      <TableCell className="pl-6 py-4">
-                        <span className="font-medium text-foreground">{formatDate(apt.appointment_date)}</span>
-                      </TableCell>
-                      <TableCell className="py-4">
-                         <span className="bg-secondary/50 text-secondary-foreground px-3 py-1 rounded-full text-sm">
-                           {apt.service?.name ?? "—"}
-                         </span>
-                      </TableCell>
-                      <TableCell className="text-right py-4 pr-6">
-                        <span className="inline-flex items-center font-bold text-green-600 dark:text-green-500 bg-green-500/10 px-3 py-1 rounded-lg">
-                          + {formatCurrency(apt.service?.price ?? 0)}
-                        </span>
-                      </TableCell>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow className="hover:bg-transparent border-border/50">
+                      <TableHead className="pl-6 h-12">Data</TableHead>
+                      <TableHead>Serviço</TableHead>
+                      <TableHead className="text-right pr-6">Valor</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
+                  </TableHeader>
+                  <TableBody>
+                    {recentActivity.map((apt) => (
+                      <TableRow key={apt.id} className="hover:bg-muted/40 transition-colors border-border/40">
+                        <TableCell className="pl-6 py-4">
+                          <span className="font-medium text-foreground">{formatDate(apt.appointment_date)}</span>
+                        </TableCell>
+                        <TableCell className="py-4">
+                           <span className="bg-secondary/50 text-secondary-foreground px-3 py-1 rounded-full text-sm">
+                             {isPremium ? (apt.service?.name ?? "—") : "********"}
+                           </span>
+                        </TableCell>
+                        <TableCell className="text-right py-4 pr-6">
+                          <span className="inline-flex items-center font-bold text-green-600 dark:text-green-500 bg-green-500/10 px-3 py-1 rounded-lg">
+                            + {formatCurrency(apt.service?.price ?? 0)}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>

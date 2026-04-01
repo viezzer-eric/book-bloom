@@ -44,4 +44,10 @@ export const useUpsertProvider = () => {
     },
   });
 };
-
+export const useProviderPlan = (userId: string | undefined | null) => {
+  return useQuery({
+    queryKey: ['providerPlan', userId],
+    queryFn: () => providerRepository.getProviderPlan(userId as string),
+    enabled: !!userId,
+  });
+};
