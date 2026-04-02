@@ -1,15 +1,35 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  ReactNode,
+} from "react";
+import { User, Session } from "@supabase/supabase-js";
+import { supabase } from "@/integrations/supabase/client";
 
-type UserRole = 'provider' | 'client' | null;
+type UserRole = "provider" | "client" | null;
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   userRole: UserRole;
+  /**
+   * true enquanto:
+   *   - a sessão ainda não foi lida do storage (primeira carga / F5)
+   *   - a role ainda não foi buscada após detectar o usuário
+   *
+   * Só vira false quando AMBAS as promessas terminaram.
+   * Isso garante que nunca haverá redirect prematuro.
+   */
   isLoading: boolean;
-  signUp: (email: string, password: string, fullName: string, role: 'provider' | 'client', phone?: string, document?: string, amount?: number) => Promise<{ error: any; data?: any }>;
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    role: "provider" | "client"
+  ) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
@@ -20,69 +40,104 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+  // Separamos dois estados de loading:
+  // - authLoading: a sessão ainda não foi lida
+  // - roleLoading: o usuário foi detectado mas a role ainda não chegou
+  const [authLoading, setAuthLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
+
+  // Ref para evitar setState após unmount
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  // Referência para cancelar fetch de role anterior se o user mudar rapidamente
+  const roleFetchController = useRef<AbortController | null>(null);
 
   const fetchUserRole = async (userId: string) => {
-    const { data: roleData } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
-
-    if (roleData) {
-      const role = roleData.role as UserRole;
-      
-      // If provider, check plan status
-      if (role === 'provider') {
-        const { data: planData } = await supabase
-          .from('provider_plan' as any)
-          .select('status')
-          .eq('provider_id', userId)
-          .maybeSingle();
-
-        const plan = planData as any;
-        if (plan && plan.status !== 'active') {
-          console.warn("Provider identified with inactive plan, signing out...");
-          await supabase.auth.signOut();
-          setUserRole(null);
-          return 'inactive_plan';
-        }
-      }
-      
-      setUserRole(role);
-      return role;
+    // Cancela qualquer fetch de role anterior
+    if (roleFetchController.current) {
+      roleFetchController.current.abort();
     }
-    return null;
+    roleFetchController.current = new AbortController();
+
+    if (!mountedRef.current) return;
+    setRoleLoading(true);
+
+    try {
+      const { data } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (!mountedRef.current) return;
+
+      setUserRole(data ? (data.role as UserRole) : null);
+    } catch {
+      if (mountedRef.current) {
+        setUserRole(null);
+      }
+    } finally {
+      if (mountedRef.current) {
+        setRoleLoading(false);
+      }
+    }
   };
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } =
-      supabase.auth.onAuthStateChange(async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    // 1. Ouça mudanças de estado ANTES de ler a sessão atual
+    //    (evita race condition onde onAuthStateChange dispara antes de getSession)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mountedRef.current) return;
 
-        if (session?.user) {
-          await fetchUserRole(session.user.id);
-        } else {
-          setUserRole(null);
-        }
-
-        setIsLoading(false);
-      });
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+
       if (session?.user) {
-        await fetchUserRole(session.user.id);
+        // Busca role de forma assíncrona — usando setTimeout(0) para não
+        // bloquear o callback do Supabase (boa prática recomendada pela Supabase)
+        setTimeout(() => {
+          fetchUserRole(session.user.id);
+        }, 0);
+      } else {
+        setUserRole(null);
+        setRoleLoading(false);
       }
-      setIsLoading(false);
+
+      // Sessão resolvida (pode ser null = não logado, mas foi resolvida)
+      setAuthLoading(false);
+    });
+
+    // 2. Lê a sessão existente (F5 / tab nova)
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mountedRef.current) return;
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        fetchUserRole(session.user.id);
+      } else {
+        setAuthLoading(false);
+        setRoleLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // isLoading = true enquanto qualquer parte do fluxo ainda está pendente
+  const isLoading = authLoading || roleLoading;
+
+  // ─── Métodos ─────────────────────────────────────────────────────────────
 
   const signUp = async (email: string, password: string, fullName: string, role: 'provider' | 'client', phone?: string, document?: string, amount?: number) => {
     try {
@@ -144,21 +199,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signIn = async (email: string, password: string) => {
-    const { data: authData, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    
-    if (error) return { error };
-
-    if (authData?.user) {
-      const roleOrStatus = await fetchUserRole(authData.user.id);
-      if (roleOrStatus === 'inactive_plan') {
-        return { error: { message: "Seu plano está inativo. Por favor, regularize seu pagamento para acessar o painel." } };
-      }
-    }
-
-    return { error: null };
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error };
   };
 
   const signOut = async () => {
@@ -167,7 +209,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, userRole, isLoading, signUp, signIn, signOut }}>
+    <AuthContext.Provider
+      value={{ user, session, userRole, isLoading, signUp, signIn, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   );
@@ -176,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

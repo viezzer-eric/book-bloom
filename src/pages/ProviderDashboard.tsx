@@ -184,10 +184,16 @@ export default function ProviderDashboard() {
   };
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      navigate("/entrar");
-    } else if (!authLoading && userRole === "client") {
-      navigate("/buscar");
+    // Só agimos quando o loading do Auth terminar de VERDADE
+    if (!authLoading) {
+      if (!user) {
+        // Se não tem usuário após carregar, vai para login
+        navigate("/entrar");
+      } else if (userRole && userRole !== "provider") {
+        // Se tem usuário mas o papel está definido e NÃO é provider
+        navigate("/buscar");
+      }
+      // Se for provider, ele não faz nada e mantém você na tela atual
     }
   }, [user, userRole, authLoading, navigate]);
 
@@ -448,9 +454,9 @@ export default function ProviderDashboard() {
             )}
 
             {activeTab === "faturamento" && providerProfile && (
-              <FinancialTab 
-                providerId={providerProfile.id} 
-                isPremium={providerPlan?.plan_type?.toLowerCase() === 'premium'} 
+              <FinancialTab
+                providerId={providerProfile.id}
+                isPremium={providerPlan?.plan_type?.toLowerCase() === 'premium'}
               />
             )}
 
@@ -706,11 +712,10 @@ export default function ProviderDashboard() {
                                   </p>
                                 </div>
                                 {providerPlan && (
-                                  <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
-                                    providerPlan.plan_type?.toLowerCase() === 'premium' 
-                                    ? "animate-foil shadow-foil text-white" 
-                                    : "bg-primary/10 text-primary border border-primary/20"
-                                  }`}>
+                                  <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${providerPlan.plan_type?.toLowerCase() === 'premium'
+                                      ? "animate-foil shadow-foil text-white"
+                                      : "bg-primary/10 text-primary border border-primary/20"
+                                    }`}>
                                     {providerPlan.plan_type}
                                   </div>
                                 )}
