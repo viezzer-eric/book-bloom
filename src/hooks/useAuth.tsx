@@ -28,8 +28,11 @@ interface AuthContextType {
     email: string,
     password: string,
     fullName: string,
-    role: "provider" | "client"
-  ) => Promise<{ error: any }>;
+    role: "provider" | "client",
+    phone?: string,
+    document?: string,
+    amount?: number
+  ) => Promise<{ error: any; data?: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
 }
