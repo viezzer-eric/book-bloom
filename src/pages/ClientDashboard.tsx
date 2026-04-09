@@ -107,11 +107,17 @@ export default function ClientDashboard() {
     );
   }
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+
   const upcomingAppointments = appointments.filter(
-    (apt) => apt.status === "pending" || apt.status === "confirmed"
+    (apt) => (apt.status === "pending" || apt.status === "confirmed") && apt.appointment_date >= todayStr
   );
   const pastAppointments = appointments.filter(
-    (apt) => apt.status === "completed" || apt.status === "cancelled"
+    (apt) =>
+      apt.status === "completed" ||
+      apt.status === "cancelled" ||
+      ((apt.status === "pending" || apt.status === "confirmed") && apt.appointment_date < todayStr)
   );
 
   return (

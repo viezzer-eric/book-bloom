@@ -78,6 +78,25 @@ export function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
 }
 
 /**
+ * ClientOnlyRoute — Permite acesso a visitantes e clientes,
+ * mas redireciona prestadores que tentarem entrar em áreas de busca/agendamento.
+ */
+export function ClientOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { userRole, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <AuthLoadingScreen />;
+  }
+
+  // Se logado como prestador, redireciona para o próprio painel
+  if (userRole === "provider") {
+    return <Navigate to="/painel" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+/**
  * RoleRedirect — rota que redireciona conforme a role do usuário.
  * Útil para /dashboard genérico.
  */

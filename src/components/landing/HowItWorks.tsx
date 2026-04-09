@@ -25,7 +25,7 @@ const steps = [
 
 export function HowItWorks({ id }: { id?: string }) {
   return (
-    <section className="pt-0 pb-24 bg-background/50 relative overflow-hidden" id={id}>
+    <section className="pt-0 pb-16 md:pb-24 bg-background/50 relative overflow-hidden" id={id}>
       {/* ── Animated background (matching Hero) ── */}
       <div className="absolute inset-0 -z-10">
         {/* Grain overlay */}

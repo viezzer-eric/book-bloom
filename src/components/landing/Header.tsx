@@ -48,7 +48,8 @@ export function Header() {
 
   const getDashboardLink = () => {
     if (!user) return "/entrar";
-    return userRole === "provider" ? "/painel" : "/buscar";
+    if (userRole === "provider") return "/painel";
+    return "/meus-agendamentos";
   };
 
   return (
@@ -161,21 +162,24 @@ export function Header() {
           <div className="flex items-center gap-3 md:hidden relative z-50">
             <ThemeToggle />
             <button
-              className="p-2.5 rounded-xl bg-secondary border border-border/60 hover:border-primary/40 transition-all"
+              className="group flex h-10 w-10 items-center justify-center rounded-xl bg-secondary border border-border/60 hover:border-primary/40 transition-all active:scale-90"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label="Menu"
             >
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={mobileMenuOpen ? "close" : "open"}
-                  initial={{ opacity: 0, rotate: -90 }}
-                  animate={{ opacity: 1, rotate: 0 }}
-                  exit={{ opacity: 0, rotate: 90 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                </motion.div>
-              </AnimatePresence>
+              <div className="relative h-5 w-5 flex flex-col items-center justify-center gap-1.5">
+                <motion.span
+                  animate={mobileMenuOpen ? { rotate: 45, y: 7 } : { rotate: 0, y: 0 }}
+                  className="h-0.5 w-6 rounded-full bg-foreground block origin-center transition-all duration-300 group-hover:bg-primary"
+                />
+                <motion.span
+                  animate={mobileMenuOpen ? { opacity: 0, x: -10 } : { opacity: 1, x: 0 }}
+                  className="h-0.5 w-6 rounded-full bg-foreground block transition-all duration-300 group-hover:bg-primary"
+                />
+                <motion.span
+                  animate={mobileMenuOpen ? { rotate: -45, y: -7 } : { rotate: 0, y: 0 }}
+                  className="h-0.5 w-6 rounded-full bg-foreground block origin-center transition-all duration-300 group-hover:bg-primary"
+                />
+              </div>
             </button>
           </div>
         </div>
@@ -185,56 +189,69 @@ export function Header() {
       <AnimatePresence>
         {mobileMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
-            className="md:hidden bg-background/95 backdrop-blur-xl border-t border-border/40 overflow-hidden"
+            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+            className="md:hidden fixed inset-x-0 top-0 pt-20 pb-8 bg-background/98 backdrop-blur-2xl border-b border-border/40 shadow-2xl z-40"
           >
-            <nav className="container mx-auto px-6 py-8 flex flex-col gap-6">
+            <nav className="container mx-auto px-6 py-8 flex flex-col gap-8">
               <div className="space-y-4">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] pl-4">Navegação</p>
+                <motion.p
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 }}
+                  className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] pl-4"
+                >
+                  Explorar
+                </motion.p>
                 {navLinks.map((link, idx) => (
                   <motion.a
                     key={link.name}
                     href={link.href}
                     initial={{ x: -20, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 + idx * 0.05 }}
+                    transition={{ delay: 0.15 + idx * 0.05 }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-4 px-4 py-3 text-lg font-medium text-foreground hover:bg-secondary rounded-2xl transition-all"
+                    className="flex items-center gap-4 px-4 py-4 text-xl font-semibold text-foreground hover:bg-primary/10 rounded-2xl transition-all group"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full bg-primary/40" />
+                    <div className="w-2 h-2 rounded-full bg-primary/20 group-hover:bg-primary transition-colors" />
                     {link.name}
                   </motion.a>
                 ))}
               </div>
 
-              <div className="pt-6 border-t border-border/40 space-y-4">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] pl-4">Conta</p>
-                {user ? (
-                  <Link to={getDashboardLink()} onClick={() => setMobileMenuOpen(false)}>
-                    <Button size="lg" className="w-full rounded-2xl font-bold">
-                      Ir para o Painel
-                      <ArrowRight className="w-5 h-5 ml-2" />
-                    </Button>
-                  </Link>
-                ) : (
-                  <div className="grid gap-3">
-                    <Link to="/entrar" onClick={() => setMobileMenuOpen(false)}>
-                      <Button variant="outline" size="lg" className="w-full rounded-2xl font-bold border-border/60">
-                        Entrar
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                className="pt-8 border-t border-border/40 space-y-4"
+              >
+                <div className="grid gap-4">
+                  {user ? (
+                    <Link to={getDashboardLink()} onClick={() => setMobileMenuOpen(false)}>
+                      <Button size="lg" className="w-full h-14 rounded-2xl font-bold shadow-glow shadow-primary/20 text-lg">
+                        Ir para o Painel
+                        <ArrowRight className="w-5 h-5 ml-2" />
                       </Button>
                     </Link>
-                    <Link to="/entrar?mode=register" onClick={() => setMobileMenuOpen(false)}>
-                      <Button size="lg" className="w-full rounded-2xl font-bold shadow-glow shadow-primary/20">
-                        Começar Agora
-                        <Sparkles className="w-5 h-5 ml-2" />
-                      </Button>
-                    </Link>
-                  </div>
-                )}
-              </div>
+                  ) : (
+                    <div className="flex flex-col gap-3">
+                      <Link to="/entrar" onClick={() => setMobileMenuOpen(false)}>
+                        <Button variant="outline" size="lg" className="w-full h-14 rounded-2xl font-bold border-border/60 text-lg">
+                          Entrar na conta
+                        </Button>
+                      </Link>
+                      <Link to="/entrar?mode=register" onClick={() => setMobileMenuOpen(false)}>
+                        <Button size="lg" className="w-full h-14 rounded-2xl font-bold shadow-glow shadow-primary/20 text-lg bg-gradient-to-r from-primary to-primary/90">
+                          Começar Agora
+                          <Sparkles className="w-5 h-5 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              </motion.div>
             </nav>
           </motion.div>
         )}

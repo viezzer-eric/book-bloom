@@ -66,6 +66,8 @@ const plans = [
   },
 ];
 
+import { Link } from "react-router-dom";
+
 interface PricingSwitchProps {
   isYearly: boolean;
   onSwitch: (value: boolean) => void;
@@ -246,16 +248,18 @@ export default function PricingSection({ id }: { id?: string }) {
                 </div>
               </CardContent>
               <CardFooter className="p-8 mt-auto">
-                <button
-                  className={cn(
-                    "w-full py-4 text-base font-bold rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95",
-                    plan.popular
-                      ? "bg-primary text-primary-foreground shadow-medium hover:shadow-glow"
-                      : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
-                  )}
-                >
-                  {plan.buttonText}
-                </button>
+                <Link to="/entrar?mode=register" className="w-full">
+                  <button
+                    className={cn(
+                      "w-full py-4 text-base font-bold rounded-xl transition-all duration-300 transform hover:-translate-y-1 active:scale-95",
+                      plan.popular
+                        ? "bg-primary text-primary-foreground shadow-medium hover:shadow-glow"
+                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                    )}
+                  >
+                    {plan.buttonText}
+                  </button>
+                </Link>
               </CardFooter>
             </Card>
           </TimelineContent>

@@ -106,6 +106,10 @@ export default function ProviderDashboard() {
 
   const isLoading = isProviderLoading;
 
+  const isPlanExpired = providerPlan?.status
+    ? providerPlan.status.toLowerCase() !== 'active'
+    : false;
+
   const fetchData = () => {
     refetchServices();
     refetchAppointments();
@@ -184,6 +188,14 @@ export default function ProviderDashboard() {
   };
 
   useEffect(() => {
+    // Se o plano estiver expirado, força a aba de configurações
+    if (!isPlanLoading && isPlanExpired && activeTab !== "configuracoes" && activeTab !== "faturamento") {
+      setActiveTab("configuracoes");
+      toast.error("Seu plano expirou. Renove para acessar todas as funcionalidades.");
+    }
+  }, [isPlanExpired, isPlanLoading, activeTab]);
+
+  useEffect(() => {
     // Só agimos quando o loading do Auth terminar de VERDADE
     if (!authLoading) {
       if (!user) {
@@ -207,6 +219,32 @@ export default function ProviderDashboard() {
     // evita cache antigo
     setBusinessPhoto(`${data.publicUrl}?t=${Date.now()}`);
   }, [(providerProfile as any)?.avatar_url]);
+
+  useEffect(() => {
+    if (!providerProfile?.id) return;
+
+    // Canal de Realtime para monitorar agendamentos do profissional
+    const channel = supabase
+      .channel(`appointments-realtime-${providerProfile.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `provider_id=eq.${providerProfile.id}`,
+        },
+        () => {
+          // Atualiza os dados quando houver qualquer mudança
+          refetchAppointments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [providerProfile?.id, refetchAppointments]);
 
   useEffect(() => {
     if (providerProfile?.business_name) {
@@ -410,29 +448,41 @@ export default function ProviderDashboard() {
             <nav className="space-y-1.5 flex flex-col">
               {[
                 { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
-                { id: "faturamento", icon: DollarSign, label: "Faturamento", locked: providerPlan?.plan_type?.toLowerCase() !== 'premium' },
+                { id: "faturamento", icon: DollarSign, label: "Faturamento" },
                 { id: "agendamentos", icon: History, label: "Agendamentos" },
                 { id: "servicos", icon: Clock, label: "Serviços" },
                 { id: "clientes", icon: Users, label: "Clientes" },
                 { id: "configuracoes", icon: Settings, label: "Configurações" },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setActiveTab(item.id)}
-                  className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all font-medium ${activeTab === item.id
-                    ? "bg-primary text-primary-foreground shadow-medium shadow-primary/20 scale-[1.02]"
-                    : "text-muted-foreground hover:bg-card/60 hover:text-foreground hover:shadow-soft"
-                    }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <item.icon className="w-5 h-5" />
-                    <span>{item.label}</span>
-                  </div>
-                  {item.locked && (
-                    <Lock className="w-4 h-4 opacity-70" />
-                  )}
-                </button>
-              ))}
+              ].map((item) => {
+                const isPremiumLocked = item.id === "faturamento" && providerPlan?.plan_type?.toLowerCase() !== 'premium';
+                const isExpiradoLocked = isPlanExpired && item.id !== "configuracoes";
+                const isLocked = isPremiumLocked || isExpiradoLocked;
+
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => {
+                      if (isLocked) {
+                        toast.error(isExpiradoLocked ? "Plano expirado. Renove para acessar." : "Disponível apenas no plano Premium.");
+                        return;
+                      }
+                      setActiveTab(item.id);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-xl text-left transition-all font-medium ${activeTab === item.id
+                      ? "bg-primary text-primary-foreground shadow-medium shadow-primary/20 scale-[1.02]"
+                      : "text-muted-foreground hover:bg-card/60 hover:text-foreground hover:shadow-soft"
+                      } ${isLocked ? "opacity-60 grayscale-[0.5]" : ""}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <item.icon className="w-5 h-5" />
+                      <span>{item.label}</span>
+                    </div>
+                    {isLocked && (
+                      <Lock className="w-4 h-4 opacity-70" />
+                    )}
+                  </button>
+                );
+              })}
             </nav>
             {providerProfile && (
               <div className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 relative overflow-hidden group">
@@ -713,8 +763,8 @@ export default function ProviderDashboard() {
                                 </div>
                                 {providerPlan && (
                                   <div className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider transition-all duration-300 ${providerPlan.plan_type?.toLowerCase() === 'premium'
-                                      ? "animate-foil shadow-foil text-white"
-                                      : "bg-primary/10 text-primary border border-primary/20"
+                                    ? "animate-foil shadow-foil text-white"
+                                    : "bg-primary/10 text-primary border border-primary/20"
                                     }`}>
                                     {providerPlan.plan_type}
                                   </div>

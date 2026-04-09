@@ -314,15 +314,24 @@ export default function Auth() {
     try {
       if (mode === "register") {
         let planAmount = 0;
-        if (role === "provider" && selectedPlan !== "free") {
-          const plan = PLANS.find((p) => p.id === selectedPlan);
-          if (plan) {
-            const monthlyPrice = parseInt(plan.price.replace("R$ ", ""));
-            planAmount = billingCycle === "monthly" ? monthlyPrice : Math.floor(monthlyPrice * 12 * 0.84);
+        let planType = "free";
+
+        if (role === "provider") {
+          // Mapeia o ID do plano para a string categórica (free, basic, premium)
+          if (selectedPlan === "monthly") planType = "basic";
+          else if (selectedPlan === "finance") planType = "premium";
+          
+          // Se o plano não for 'free', calcula o valor baseado no ciclo
+          if (selectedPlan !== "free") {
+            const plan = PLANS.find((p) => p.id === selectedPlan);
+            if (plan) {
+              const monthlyPrice = parseInt(plan.price.replace("R$ ", ""));
+              planAmount = billingCycle === "monthly" ? monthlyPrice : Math.floor(monthlyPrice * 12 * 0.84);
+            }
           }
         }
 
-        const { error, data } = await signUp(formData.email, formData.password, formData.fullName, role, formData.phone, formData.document, planAmount);
+        const { error, data } = await signUp(formData.email, formData.password, formData.fullName, role, formData.phone, formData.document, planAmount, planType);
 
         if (error) {
           toast.error(error.message || "Erro ao criar conta");

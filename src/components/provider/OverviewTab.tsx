@@ -1,7 +1,7 @@
 import { Calendar, Clock, ChevronDown, CheckCircle2, XCircle, Clock3 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useUpdateAppointmentStatus } from "@/hooks/useAppointments";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface Appointment {
   id: string;
@@ -23,6 +23,12 @@ export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) 
   const [openId, setOpenId] = useState<string | null>(null);
   const [localAppointments, setLocalAppointments] = useState(appointments);
   const updateAppointmentStatus = useUpdateAppointmentStatus();
+ 
+  // Sincroniza o estado local quando os dados do React Query (prop) mudam
+  // Isso resolve o bug do F5 onde os agendamentos "sumiam"
+  useEffect(() => {
+    setLocalAppointments(appointments);
+  }, [appointments]);
 
   const formatTime = (time: string) => time.slice(0, 5);
 
@@ -90,16 +96,22 @@ export function OverviewTab({ appointments, onStatusChange }: OverviewTabProps) 
   };
 
   const now = new Date();
-  const futureAppointments = localAppointments.filter((apt) => {
-  const aptDateTime = new Date(`${apt.appointment_date}T${apt.start_time}`);
-  const normalizedStatus = apt.status?.toLowerCase().trim();
+  const todayStr = now.toISOString().split("T")[0];
 
-  return (
-    aptDateTime > now &&
-    normalizedStatus !== "cancelled" &&
-    normalizedStatus !== "completed"
-  );
-  }).sort((a,b) => new Date(`${a.appointment_date}T${a.start_time}`).getTime() - new Date(`${b.appointment_date}T${b.start_time}`).getTime());
+  const futureAppointments = localAppointments.filter((apt) => {
+    const normalizedStatus = apt.status?.toLowerCase().trim();
+
+    // Mostra tudo que for HOJE ou no FUTURO e que não esteja cancelado/concluído
+    return (
+      (apt.appointment_date >= todayStr) &&
+      normalizedStatus !== "cancelled" &&
+      normalizedStatus !== "completed"
+    );
+  }).sort((a,b) => {
+    const dateA = new Date(`${a.appointment_date}T${a.start_time}`).getTime();
+    const dateB = new Date(`${b.appointment_date}T${b.start_time}`).getTime();
+    return dateA - dateB;
+  });
 
   return (
     <div className="space-y-8 animate-fade-in">

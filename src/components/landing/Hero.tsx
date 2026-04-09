@@ -32,17 +32,26 @@ export function Hero() {
   const [providersCount, setProvidersCount] = useState(0);
   const [activeTag, setActiveTag] = useState(0);
   const [testimonialIdx, setTestimonialIdx] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-
+ 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   const springX = useSpring(mouseX, { stiffness: 80, damping: 20 });
   const springY = useSpring(mouseY, { stiffness: 80, damping: 20 });
-
-  const orb1X = useTransform(springX, [0, 1], [-30, 30]);
-  const orb1Y = useTransform(springY, [0, 1], [-20, 20]);
-  const orb2X = useTransform(springX, [0, 1], [20, -20]);
-  const orb2Y = useTransform(springY, [0, 1], [15, -15]);
+ 
+  // Dampen the effect on mobile (or disable it)
+  const orb1X = useTransform(springX, [0, 1], isMobile ? [-5, 5] : [-30, 30]);
+  const orb1Y = useTransform(springY, [0, 1], isMobile ? [-3, 3] : [-20, 20]);
+  const orb2X = useTransform(springX, [0, 1], isMobile ? [5, -5] : [20, -20]);
+  const orb2Y = useTransform(springY, [0, 1], isMobile ? [3, -3] : [15, -15]);
+ 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     providerRepository.countProviders().then(setProvidersCount);
@@ -63,7 +72,7 @@ export function Hero() {
   }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isMobile) return;
     const { left, top, width, height } = containerRef.current.getBoundingClientRect();
     mouseX.set((e.clientX - left) / width);
     mouseY.set((e.clientY - top) / height);
@@ -112,29 +121,27 @@ export function Hero() {
 
         {/* Floating orbs */}
         <motion.div
-          style={{ x: orb1X, y: orb1Y }}
-          className="absolute top-1/4 right-1/4 w-[500px] h-[500px] rounded-full"
-          animate={{ scale: [1, 1.08, 1], opacity: [0.12, 0.18, 0.12] }}
-          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-          style={{
-            x: orb1X,
-            y: orb1Y,
-            background: "radial-gradient(circle, hsl(165 35% 45%) 0%, transparent 70%)",
-            filter: "blur(60px)",
-          }}
-        />
-        <motion.div
-          style={{ x: orb2X, y: orb2Y }}
-          className="absolute bottom-1/4 left-1/5 w-[400px] h-[400px] rounded-full"
-          animate={{ scale: [1, 1.12, 1], opacity: [0.08, 0.14, 0.08] }}
-          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-          style={{
-            x: orb2X,
-            y: orb2Y,
-            background: "radial-gradient(circle, hsl(15 85% 60%) 0%, transparent 70%)",
-            filter: "blur(80px)",
-          }}
-        />
+           className="absolute top-1/4 right-1/4 w-[500px] h-[500px] rounded-full"
+           animate={{ scale: [1, 1.08, 1], opacity: [0.12, 0.18, 0.12] }}
+           transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+           style={{
+             x: orb1X,
+             y: orb1Y,
+             background: "radial-gradient(circle, hsl(165 35% 45%) 0%, transparent 70%)",
+             filter: "blur(60px)",
+           }}
+         />
+         <motion.div
+           className="absolute bottom-1/4 left-1/5 w-[400px] h-[400px] rounded-full"
+           animate={{ scale: [1, 1.12, 1], opacity: [0.08, 0.14, 0.08] }}
+           transition={{ duration: 10, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+           style={{
+             x: orb2X,
+             y: orb2Y,
+             background: "radial-gradient(circle, hsl(15 85% 60%) 0%, transparent 70%)",
+             filter: "blur(80px)",
+           }}
+         />
       </div>
 
       <div className="container mx-auto px-4 py-24 relative z-10">
@@ -253,18 +260,6 @@ export function Hero() {
                       whileHover={{ x: "100%" }}
                       transition={{ duration: 0.4 }}
                     />
-                  </Button>
-                </motion.div>
-              </Link>
-
-              <Link to="/buscar">
-                <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                  <Button
-                    variant="outline"
-                    size="xl"
-                    className="w-full sm:w-auto border-border/60 hover:border-primary/40 hover:bg-primary/5 transition-colors duration-200"
-                  >
-                    Ver profissionais
                   </Button>
                 </motion.div>
               </Link>

@@ -31,7 +31,8 @@ interface AuthContextType {
     role: "provider" | "client",
     phone?: string,
     document?: string,
-    amount?: number
+    amount?: number,
+    plan?: string
   ) => Promise<{ error: any; data?: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -142,7 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ─── Métodos ─────────────────────────────────────────────────────────────
 
-  const signUp = async (email: string, password: string, fullName: string, role: 'provider' | 'client', phone?: string, document?: string, amount?: number) => {
+  const signUp = async (email: string, password: string, fullName: string, role: 'provider' | 'client', phone?: string, document?: string, amount?: number, plan?: string) => {
     try {
       // 1. Chamar o endpoint da API em C# para realizar o cadastro
       const signupResponse = await fetch('https://angelic-nonfeverish-heather.ngrok-free.dev/v1/Auth/signup', {
@@ -157,12 +158,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           fullName: fullName,
           role: role,
           phone: phone ? phone.replace(/\D/g, '') : "",
-          document: document ? document.replace(/\D/g, '') : ""
+          document: document ? document.replace(/\D/g, '') : "",
+          amount: amount || 0,
+          plan: plan || "free"
         })
       });
 
       if (!signupResponse.ok) {
         throw new Error('Erro ao criar conta na API');
+      }
+
+      // Se for Role Client ou Plano Free (amount <= 0), não gera cobrança PIX
+      if (!amount || amount <= 0) {
+        return { error: null, data: null };
       }
 
       // Tudo dando certo, chamar o segundo endpoint (criar PIX)

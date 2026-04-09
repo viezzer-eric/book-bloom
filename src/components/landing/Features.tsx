@@ -191,7 +191,7 @@ export function Features({ id }: { id?: string }) {
 
   return (
     <section
-      className="py-32 bg-background relative overflow-hidden"
+      className="py-16 md:py-32 bg-background relative overflow-hidden"
       id={id}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
