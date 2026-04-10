@@ -13,8 +13,10 @@ import {
   History,
   Edit,
   CheckCircle2,
-  Lock
+  Lock,
+  PlayCircle
 } from "lucide-react";
+import { Joyride, STATUS, type EventData, type Step } from "react-joyride";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -105,6 +107,61 @@ export default function ProviderDashboard() {
   const upsertProvider = useUpsertProvider();
 
   const isLoading = isProviderLoading;
+
+  const [runTour, setRunTour] = useState(false);
+  const [steps] = useState<Step[]>([
+    {
+      target: "#sidebar-nav",
+      content: "Bem-vindo! Use este menu lateral para navegar entre todas as ferramentas disponíveis.",
+      placement: "right" as const,
+      skipBeacon: true,
+    },
+    {
+      target: "#nav-visao-geral",
+      content: "Na Visão Geral, você acompanha seus agendamentos do dia e métricas principais.",
+    },
+    {
+      target: "#nav-servicos",
+      content: "Aqui você define quais serviços oferece, duração e preços.",
+    },
+    {
+      target: "#nav-faturamento",
+      content: "Acompanhe seus lucros e desempenho financeiro (exclusivo para membros Premium).",
+    },
+    {
+      target: "#nav-configuracoes",
+      content: "Personalize seu perfil, endereço e seus horários de atendimento.",
+    },
+    {
+      target: "#booking-link-card",
+      content: "Este é o seu link mágico de agendamento! Copie e compartilhe em suas redes sociais.",
+    },
+    {
+      target: "#notification-bell",
+      content: "Fique de olho no sino! Enviaremos notificações em tempo real sempre que houver novidades.",
+    },
+    {
+      target: "#user-avatar-menu",
+      content: "Aqui você gerencia sua conta e pode sair com segurança.",
+    },
+  ]);
+
+  useEffect(() => {
+    const tourStatus = localStorage.getItem("provider-onboarding-completed");
+    if (!tourStatus && !isLoading && providerProfile) {
+      setRunTour(true);
+    }
+  }, [isLoading, providerProfile]);
+
+  const handleJoyrideCallback = (data: EventData) => {
+    const { status } = data;
+    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    if (finishedStatuses.includes(status)) {
+      setRunTour(false);
+      localStorage.setItem("provider-onboarding-completed", "true");
+    }
+  };
 
   const isPlanExpired = providerPlan?.status
     ? providerPlan.status.toLowerCase() !== 'active'
@@ -421,12 +478,48 @@ export default function ProviderDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Joyride
+        steps={steps}
+        run={runTour}
+        continuous
+        onEvent={handleJoyrideCallback}
+        locale={{
+          back: "Anterior",
+          close: "Fechar",
+          last: "Finalizar",
+          next: "Próximo",
+          skip: "Pular Tour",
+        }}
+        options={{
+          showProgress: true,
+          buttons: ["back", "primary", "skip"],
+          primaryColor: "hsl(var(--primary))",
+          textColor: "hsl(var(--foreground))",
+          backgroundColor: "hsl(var(--card))",
+          arrowColor: "hsl(var(--card))",
+        }}
+        styles={{
+          buttonPrimary: {
+            borderRadius: "0.75rem",
+            fontWeight: "bold",
+            padding: "0.5rem 1rem",
+          },
+          buttonBack: {
+            marginRight: "0.5rem",
+          },
+          tooltip: {
+            borderRadius: "1rem",
+            padding: "1rem",
+            border: "1px solid hsl(var(--border))",
+          }
+        }}
+      />
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-40">
+      <header id="dashboard-header" className="bg-card border-b border-border sticky top-0 z-40">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
+              <div id="logo-branding" className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-lg gradient-hero flex items-center justify-center">
                   <Calendar className="w-5 h-5 text-primary-foreground" />
                 </div>
@@ -434,8 +527,12 @@ export default function ProviderDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <NotificationBell todayAppointments={appointments} providerId={providerProfile?.id}></NotificationBell>
-              <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
+              <div id="notification-bell">
+                <NotificationBell todayAppointments={appointments} providerId={providerProfile?.id}></NotificationBell>
+              </div>
+              <div id="user-avatar-menu">
+                <AvatarUserMenu profileData={profile} onSignOut={signOut}></AvatarUserMenu>
+              </div>
             </div>
           </div>
         </div>
@@ -445,7 +542,7 @@ export default function ProviderDashboard() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar */}
           <aside className="lg:w-64 flex-shrink-0 animate-fade-in">
-            <nav className="space-y-1.5 flex flex-col">
+            <nav id="sidebar-nav" className="space-y-1.5 flex flex-col">
               {[
                 { id: "visao-geral", icon: LayoutDashboard, label: "Visão Geral" },
                 { id: "faturamento", icon: DollarSign, label: "Faturamento" },
@@ -461,6 +558,7 @@ export default function ProviderDashboard() {
                 return (
                   <button
                     key={item.id}
+                    id={`nav-${item.id}`}
                     onClick={() => {
                       if (isLocked) {
                         toast.error(isExpiradoLocked ? "Plano expirado. Renove para acessar." : "Disponível apenas no plano Premium.");
@@ -485,7 +583,7 @@ export default function ProviderDashboard() {
               })}
             </nav>
             {providerProfile && (
-              <div className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 relative overflow-hidden group">
+              <div id="booking-link-card" className="mt-8 p-5 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent border border-primary/20 relative overflow-hidden group">
                 <div className="absolute -right-4 -top-4 w-20 h-20 bg-primary/20 blur-2xl rounded-full group-hover:scale-150 transition-transform"></div>
                 <h4 className="font-semibold text-foreground mb-1 relative z-10">Link de Agendamento</h4>
                 <p className="text-sm text-muted-foreground mb-4 relative z-10">Compartilhe na sua bio</p>
@@ -790,6 +888,26 @@ export default function ProviderDashboard() {
                           </>
                         )}
                       </div>
+                    </div>
+
+                    <div className="p-6 sm:p-8 rounded-3xl bg-card/60 backdrop-blur-sm border border-border/60 shadow-soft">
+                      <h3 className="text-xl font-display font-bold text-foreground mb-4 flex items-center gap-2">
+                        <PlayCircle className="w-5 h-5 text-primary" />
+                        Tour de Onboarding
+                      </h3>
+                      <p className="text-sm text-muted-foreground mb-6">
+                        Deseja rever as principais funcionalidades do seu painel? Reinicie o tour interativo a qualquer momento.
+                      </p>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setRunTour(true);
+                          localStorage.removeItem("provider-onboarding-completed");
+                        }}
+                        className="w-full h-11 rounded-xl border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground font-semibold"
+                      >
+                        Iniciar Tour Interativo
+                      </Button>
                     </div>
 
                     <div className="sticky bottom-6">
